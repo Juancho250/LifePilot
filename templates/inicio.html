@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block titulo %}Inicio{% endblock %}
+
+{% block contenido %}
+<h1>Bienvenido a LifePilot</h1>
+<p>Tu asistente personal para gestionar tareas, gastos e ideas para generar ingresos.</p>
+
+{% if not session.get('logueado') %}
+<p><a href="{{ url_for('registrarse') }}">Regístrate</a> o <a href="{{ url_for('iniciar_sesion') }}">inicia sesión</a> para comenzar.</p>
+{% else %}
+<p>¡Hola {{ session.get('usuario') }}! Ve a tu <a href="{{ url_for('panel') }}">Panel</a>.</p>
+{% endif %}
+{% endblock %}

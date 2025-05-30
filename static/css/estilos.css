@@ -1,0 +1,165 @@
+/* Reset y base */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f0f2f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Header */
+header {
+    background: #34495e;
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    justify-content: end;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+header a {
+    color: white;
+    text-decoration: none;
+    margin-left: 20px;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+header a:hover {
+    color: #1abc9c;
+}
+
+/* Main */
+main {
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+/* Lista sin estilos por defecto */
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Mensajes de error en rojo más suave y legible */
+ul.error-messages {
+    color: #e74c3c;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+/* Botones */
+button {
+    background-color: #1abc9c;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #16a085;
+}
+
+/* Inputs */
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    margin: 8px 0 16px 0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+    border-color: #1abc9c;
+    outline: none;
+}
+
+/* Estilo del input tipo file */
+.input-file {
+    display: none;
+}
+
+.label-file {
+    display: inline-block;
+    background-color: #3498db;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+    margin-top: 10px;
+}
+
+.label-file:hover {
+    background-color: #2980b9;
+}
+
+/* Texto de nombre del archivo seleccionado (opcional) */
+.nombre-archivo {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #333;
+}
+
+
+/* Etiquetas */
+label {
+    font-weight: 600;
+    display: block;
+}
+
+/* Enlaces dentro de párrafos */
+p a {
+    color: #1abc9c;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+p a:hover {
+    text-decoration: underline;
+}
+
+
+/* Centrar contenido del panel */
+.panel-contenido {
+    max-width: 500px;
+    margin: 40px auto;
+    text-align: center;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Foto de perfil redonda */
+.foto-perfil {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 20px;
+    border: 3px solid #3498db;
+}

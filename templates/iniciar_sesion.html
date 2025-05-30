@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block titulo %}Iniciar sesión{% endblock %}
+
+{% block contenido %}
+<h2>Iniciar sesión</h2>
+<form method="POST" action="{{ url_for('iniciar_sesion') }}">
+    <label for="usuario">Nombre de usuario:</label><br />
+    <input type="text" name="usuario" id="usuario" required /><br />
+
+    <label for="clave">Contraseña:</label><br />
+    <input type="password" name="clave" id="clave" required /><br />
+
+    <button type="submit">Entrar</button>
+</form>
+<p>¿No tienes cuenta? <a href="{{ url_for('registrarse') }}">Regístrate aquí</a>.</p>
+{% endblock %}

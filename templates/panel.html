@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block titulo %}Panel{% endblock %}
+
+{% block contenido %}
+<div class="panel-contenido">
+    <h2>Bienvenido, {{ usuario }}</h2>
+
+    {% if usuario_foto %}
+        <img src="{{ url_for('static', filename='uploads/' ~ usuario_foto) }}" alt="Foto de perfil" class="foto-perfil">
+    {% else %}
+        <p>No has subido foto de perfil</p>
+    {% endif %}
+
+    <p>Esta será tu área para gestionar tareas, gastos e ideas.</p>
+</div>
+{% endblock %}
