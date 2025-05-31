@@ -1,3 +1,59 @@
+/* === Estilos específicos para la página de inicio === */
+.pagina-inicio body {
+  background: linear-gradient(135deg, #fff9f0 0%, #f7e3b7 50%, #d4b04b 100%);
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Navbar transparente solo en inicio */
+.pagina-inicio header {
+  background: transparent !important;
+  box-shadow: none !important;
+  position: absolute;
+  width: 100%;
+  top: 0;
+  z-index: 10;
+}
+
+.pagina-inicio .navbar a {
+  color: #333 !important;
+}
+
+.pagina-inicio img{
+    width: 50vh;
+}
+
+.pagina-inicio h1{
+    font-size: 11vh;
+}
+
+.pagina-inicio .inicio-contenedor a {
+  color: #b87e17;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.pagina-inicio .inicio-contenedor a:hover {
+  text-decoration: underline;
+}
+
+/* Opcional: imagen de fondo sutil o patrón decorativo */
+.pagina-inicio::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 0;
+}
+
+
+
+
+
 /* --------------------------------------------- */
 /* RESET Y BASE                                 */
 /* --------------------------------------------- */

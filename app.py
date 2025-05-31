@@ -14,7 +14,7 @@ app.config['SECRET_KEY'] = 'd16f2bfa7491b82b8f9e30cf60eac02c82c648b1a93f7d9c671a
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = 'HnvPhkdaVeZ4pD'  # Asegúrate de poner tu contraseña de MySQL si tiene
-app.config['MYSQL_DB'] = 'lifepilot_db'
+app.config['MYSQL_DB'] = 'oryon_db'
 
 mysql = MySQL(app)
 

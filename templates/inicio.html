@@ -1,13 +1,32 @@
 {% extends "base.html" %}
+
+{% block body_class %}pagina-inicio{% endblock %}
+
 {% block titulo %}Inicio{% endblock %}
 
 {% block contenido %}
-<h1>Bienvenido a LifePilot</h1>
-<p>Tu asistente personal para gestionar tareas, gastos e ideas para generar ingresos.</p>
+<div class="inicio-contenedor">
 
-{% if not session.get('logueado') %}
-<p><a href="{{ url_for('registrarse') }}">Regístrate</a> o <a href="{{ url_for('iniciar_sesion') }}">inicia sesión</a> para comenzar.</p>
-{% else %}
-<p>¡Hola {{ session.get('usuario') }}! Ve a tu <a href="{{ url_for('panel') }}">Panel</a>.</p>
-{% endif %}
+  <!-- Logo + Nombre -->
+  <div class="logo-nombre">
+    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo ORYON" class="logo" />
+    <h1>ORYON</h1>
+  </div>
+
+  <!-- Mensaje de bienvenida -->
+  <p class="mensaje-principal">
+    Tu asistente personal para gestionar tareas, gastos e ideas para generar ingresos.
+  </p>
+
+  <!-- Condicional para mostrar registro/login o panel -->
+  {% if not session.get('logueado') %}
+  <div class="botones-usuario">
+    <a href="{{ url_for('registrarse') }}" class="btn btn-primario">Regístrate</a>
+    <a href="{{ url_for('iniciar_sesion') }}" class="btn btn-secundario">Inicia sesión</a>
+  </div>
+  {% else %}
+  <p class="saludo">¡Hola <strong>{{ session.get('usuario') }}</strong>! Ve a tu <a href="{{ url_for('panel') }}">Panel</a>.</p>
+  {% endif %}
+
+</div>
 {% endblock %}
