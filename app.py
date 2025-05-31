@@ -99,13 +99,25 @@ def panel():
     return redirect(url_for('iniciar_sesion'))
 
 
-@app.route('/tareas')
+@app.route('/tareas', methods=['GET', 'POST'])
 def tareas():
-    if 'logueado' in session:
-        # Aquí puedes obtener datos de tareas si usas base de datos
-        return render_template('tareas.html', usuario=session['usuario'])
-    else:
+    if 'logueado' not in session:
         return redirect(url_for('iniciar_sesion'))
+
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    if request.method == 'POST':
+        titulo = request.form['titulo']
+        estado = 'todo'  # Estado inicial para nuevas tareas
+        id_usuario = session['id_usuario']
+        cursor.execute('INSERT INTO tareas (titulo, estado, id_usuario) VALUES (%s, %s, %s)', 
+                       (titulo, estado, id_usuario))
+        mysql.connection.commit()
+        return redirect(url_for('tareas'))
+
+    cursor.execute('SELECT * FROM tareas WHERE id_usuario = %s', (session['id_usuario'],))
+    tareas_usuario = cursor.fetchall()
+    return render_template('tareas.html', usuario=session['usuario'], tareas=tareas_usuario)
 
 @app.route('/gastos')
 def gastos():
