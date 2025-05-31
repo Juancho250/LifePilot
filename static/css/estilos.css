@@ -12,27 +12,50 @@ body {
     line-height: 1.6;
 }
 
+/* Evitar desbordes cuando el menú está activo */
+body.menu-activo {
+    overflow-x: hidden;
+}
+
 /* Header */
 header {
     background: #34495e;
-    color: white;
-    padding: 15px 30px;
+    height: 60px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    justify-content: end;
+    align-items: center;        /* Centrar verticalmente */
+    padding: 0 20px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    position: relative;
 }
 
-header a {
+/* Botón hamburguesa */
+.menu-toggle {
+    font-size: 30px;
+    cursor: pointer;
+    color: #fff;               /* blanco para buen contraste */
+    background: transparent;
+    border: none;
+    margin-right: 20px;
+    user-select: none;
+    flex-shrink: 0;            /* que no se reduzca */
+}
+
+/* Navbar dentro del header */
+.navbar {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-grow: 1;              /* ocupa espacio restante */
+}
+
+.navbar a {
     color: white;
     text-decoration: none;
-    margin-left: 20px;
     font-weight: 600;
     transition: color 0.3s ease;
 }
 
-header a:hover {
+.navbar a:hover {
     color: #1abc9c;
 }
 
@@ -46,14 +69,13 @@ main {
     box-shadow: 0 3px 8px rgba(0,0,0,0.1);
 }
 
-/* Lista sin estilos por defecto */
+/* Listas */
 ul {
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
-/* Mensajes de error en rojo más suave y legible */
 ul.error-messages {
     color: #e74c3c;
     margin-bottom: 15px;
@@ -96,7 +118,7 @@ input[type="password"]:focus {
     outline: none;
 }
 
-/* Estilo del input tipo file */
+/* Estilo input file */
 .input-file {
     display: none;
 }
@@ -117,13 +139,12 @@ input[type="password"]:focus {
     background-color: #2980b9;
 }
 
-/* Texto de nombre del archivo seleccionado (opcional) */
+/* Nombre archivo */
 .nombre-archivo {
     margin-top: 8px;
     font-size: 14px;
     color: #333;
 }
-
 
 /* Etiquetas */
 label {
@@ -142,24 +163,93 @@ p a:hover {
     text-decoration: underline;
 }
 
-
-/* Centrar contenido del panel */
-.panel-contenido {
-    max-width: 500px;
-    margin: 40px auto;
-    text-align: center;
-    background: white;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+/* Overlay (fondo oscuro solo para contenido principal) */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 250px; /* justo después del menú lateral */
+    width: calc(100vw - 250px);
+    height: 100vh;
+    background: rgba(0,0,0,0.4);
+    z-index: 1099; /* debajo del menú */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
 }
 
-/* Foto de perfil redonda */
+.overlay.activo {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Menú lateral (sidebar) */
+#sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    color: #fff; /* texto blanco */
+    width: 250px;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+    padding-top: 60px;
+    transition: transform 0.3s ease;
+    z-index: 1100;
+    transform: translateX(-100%);
+}
+
+#sidebar.activo {
+    transform: translateX(0);
+}
+
+#sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#sidebar ul li {
+    padding: 12px 24px;
+}
+
+#sidebar ul li a {
+    color: #fff;  /* links en blanco */
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+#sidebar ul li a:hover {
+    color: #ddd;
+}
+
+/* Foto redonda */
 .foto-perfil {
+    border-radius: 50%;
     width: 120px;
     height: 120px;
     object-fit: cover;
-    border-radius: 50%;
-    margin-bottom: 20px;
-    border: 3px solid #3498db;
+}
+
+/* Contenido principal */
+#contenido-principal {
+    transition: transform 0.3s ease, filter 0.3s ease;
+    transform: translateX(0);
+    width: 100vw;
+    position: relative;
+    z-index: 1000;
+}
+
+#contenido-principal.desplazado {
+    transform: translateX(250px);
+    filter: brightness(0.6); /* oscurece el contenido desplazado */
+}
+
+/* Responsive: ocultar navbar en móvil */
+@media (max-width: 768px) {
+    header nav.navbar {
+        display: none;
+    }
 }

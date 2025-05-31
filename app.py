@@ -99,6 +99,31 @@ def panel():
     return redirect(url_for('iniciar_sesion'))
 
 
+@app.route('/tareas')
+def tareas():
+    if 'logueado' in session:
+        # Aquí puedes obtener datos de tareas si usas base de datos
+        return render_template('tareas.html', usuario=session['usuario'])
+    else:
+        return redirect(url_for('iniciar_sesion'))
+
+@app.route('/gastos')
+def gastos():
+    if 'logueado' in session:
+        # Aquí puedes obtener datos de gastos si usas base de datos
+        return render_template('gastos.html', usuario=session['usuario'])
+    else:
+        return redirect(url_for('iniciar_sesion'))
+
+@app.route('/ideas')
+def ideas():
+    if 'logueado' in session:
+        # Aquí puedes obtener datos de ideas si usas base de datos
+        return render_template('ideas.html', usuario=session['usuario'])
+    else:
+        return redirect(url_for('iniciar_sesion'))
+
+
 # Cierre de sesión
 @app.route('/cerrar_sesion')
 def cerrar_sesion():
