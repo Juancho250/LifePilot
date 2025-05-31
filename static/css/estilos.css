@@ -204,8 +204,7 @@ p a:hover {
 /* --------------------------------------------- */
 /* CONTENEDOR DASHBOARD                         */
 /* --------------------------------------------- */
-.contenedor-dashboard {
-  width: 100%;                 /* altura completa de la ventana */
+.contenedor-dashboard {    /* altura completa de la ventana */
   background: #f0f2f5;              /* gris claro */
   display: flex;
   justify-content: center;          /* centra horizontalmente */
