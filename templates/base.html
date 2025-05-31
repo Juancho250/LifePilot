@@ -8,7 +8,7 @@
 </head>
 
 <body>
-    <!-- Menú lateral -->
+    <!-- Menú lateral (sidebar) -->
     <nav id="sidebar">
         <ul>
             {% if session.get('logueado') %}
@@ -24,22 +24,23 @@
         </ul>
     </nav>
 
-    <!-- Overlay -->
+    <!-- Overlay (solo para oscurecer contenido principal) -->
     <div id="overlay" class="overlay" onclick="toggleMenu()"></div>
 
-    <!-- Contenedor principal -->
-    <div id="contenido-principal">
-        <header>
-            <div class="menu-toggle" onclick="toggleMenu()">☰</div>
-            <nav class="navbar">
-                <a href="{{ url_for('inicio') }}">Inicio</a>
-                {% if not session.get('logueado') %}
-                    <a href="{{ url_for('iniciar_sesion') }}">Iniciar sesión</a>
-                    <a href="{{ url_for('registrarse') }}">Registrarse</a>
-                {% endif %}
-            </nav>
-        </header>
+    <!-- HEADER FIJO EN LA PARTE SUPERIOR -->
+    <header>
+        <div class="menu-toggle" onclick="toggleMenu()">☰</div>
+        <nav class="navbar">
+            <a href="{{ url_for('inicio') }}">Inicio</a>
+            {% if not session.get('logueado') %}
+                <a href="{{ url_for('iniciar_sesion') }}">Iniciar sesión</a>
+                <a href="{{ url_for('registrarse') }}">Registrarse</a>
+            {% endif %}
+        </nav>
+    </header>
 
+    <!-- Contenedor principal (se desplaza bajo el header fijo) -->
+    <div id="contenido-principal">
         <main>
             {% with messages = get_flashed_messages() %}
                 {% if messages %}

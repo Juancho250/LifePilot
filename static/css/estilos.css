@@ -1,4 +1,6 @@
-/* Reset y base */
+/* --------------------------------------------- */
+/* RESET Y BASE                                 */
+/* --------------------------------------------- */
 * {
     box-sizing: border-box;
 }
@@ -17,7 +19,9 @@ body.menu-activo {
     overflow-x: hidden;
 }
 
-/* Header */
+/* --------------------------------------------- */
+/* HEADER Y NAVEGACIÓN                          */
+/* --------------------------------------------- */
 header {
     background: #34495e;
     height: 60px;
@@ -38,6 +42,7 @@ header {
     margin-right: 20px;
     user-select: none;
     flex-shrink: 0;            /* que no se reduzca */
+    z-index: 1000;
 }
 
 /* Navbar dentro del header */
@@ -59,7 +64,16 @@ header {
     color: #1abc9c;
 }
 
-/* Main */
+/* Responsive: ocultar navbar en móvil */
+@media (max-width: 768px) {
+    header nav.navbar {
+        display: none;
+    }
+}
+
+/* --------------------------------------------- */
+/* MAIN, CONTENIDO PRINCIPAL Y LISTAS           */
+/* --------------------------------------------- */
 main {
     max-width: 900px;
     margin: 30px auto;
@@ -69,7 +83,6 @@ main {
     box-shadow: 0 3px 8px rgba(0,0,0,0.1);
 }
 
-/* Listas */
 ul {
     list-style: none;
     padding: 0;
@@ -82,7 +95,9 @@ ul.error-messages {
     font-weight: 600;
 }
 
-/* Botones */
+/* --------------------------------------------- */
+/* BOTONES                                      */
+/* --------------------------------------------- */
 button {
     background-color: #1abc9c;
     color: white;
@@ -98,7 +113,9 @@ button:hover {
     background-color: #16a085;
 }
 
-/* Inputs */
+/* --------------------------------------------- */
+/* INPUTS Y FORMULARIOS                         */
+/* --------------------------------------------- */
 input[type="text"],
 input[type="email"],
 input[type="password"] {
@@ -163,7 +180,9 @@ p a:hover {
     text-decoration: underline;
 }
 
-/* Overlay (fondo oscuro solo para contenido principal) */
+/* --------------------------------------------- */
+/* OVERLAY (fondo oscuro cuando el menú lateral está activo) */
+/* --------------------------------------------- */
 .overlay {
     position: fixed;
     top: 0;
@@ -182,74 +201,130 @@ p a:hover {
     pointer-events: auto;
 }
 
-/* Menú lateral (sidebar) */
-#sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    color: #fff; /* texto blanco */
-    width: 250px;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 2px 0 8px rgba(0,0,0,0.15);
-    padding-top: 60px;
-    transition: transform 0.3s ease;
-    z-index: 1100;
-    transform: translateX(-100%);
+/* --------------------------------------------- */
+/* CONTENEDOR DASHBOARD                         */
+/* --------------------------------------------- */
+.contenedor-dashboard {
+  width: 100%;                 /* altura completa de la ventana */
+  background: #f0f2f5;              /* gris claro */
+  display: flex;
+  justify-content: center;          /* centra horizontalmente */
+  align-items: center;              /* centra verticalmente */
+  padding: 20px;
+  box-sizing: border-box;
 }
-
+/* --------------------------------------------- */
+/* MENÚ LATERAL (SIDEBAR)                       */
+/* --------------------------------------------- */
+#sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 250px;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+  padding-top: 60px;
+  transition: transform 0.3s ease;
+  z-index: 1100;
+  transform: translateX(-100%);
+}
 #sidebar.activo {
     transform: translateX(0);
 }
 
+/* Oculto: mueve el sidebar fuera de la vista */
+#sidebar.oculto {
+  transform: translateX(-100%);
+}
+
+/* Lista del menú */
 #sidebar ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: center;
 }
 
 #sidebar ul li {
-    padding: 12px 24px;
+    padding: 15px 0px;
 }
 
 #sidebar ul li a {
-    color: #fff;  /* links en blanco */
-    text-decoration: none;
-    font-weight: bold;
-    transition: color 0.3s ease;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  display: block;
+  transition: color 0.3s ease;
 }
 
 #sidebar ul li a:hover {
-    color: #ddd;
+  color: #1abc9c;
 }
 
-/* Foto redonda */
+/* --------------------------------------------- */
+/* FOTO DE PERFIL                              */
+/* --------------------------------------------- */
 .foto-perfil {
-    border-radius: 50%;
-    width: 120px;
-    height: 120px;
-    object-fit: cover;
+  border-radius: 50%;
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+/* Contenedor que centra todo vertical y horizontalmente */
+.contenedor-centro {
+  display: flex;
+  justify-content: center;    /* Centra horizontalmente */
+  align-items: center;            /* Ocupa toda la altura visible */
+  background-color: #f0f2f5; /* Fondo claro opcional */
+  padding: 20px;              /* Para evitar que se pegue en pantallas muy pequeñas */
+  box-sizing: border-box;
+}
+/* --------------------------------------------- */
+/* CONTENIDO PRINCIPAL                          */
+/* --------------------------------------------- */
+#contenido-principal {
+    background: white;
+    width: 100%;
+    padding: 15px 20px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    text-align: center; /* Si quieres que el texto interno esté centrado */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centra los elementos internos del #contenido-principal */
+    gap: 20px;
+    box-sizing: border-box;
+    /* No necesitas transform: translateX aquí si el main lo está centrando */
 }
 
-/* Contenido principal */
-#contenido-principal {
-    transition: transform 0.3s ease, filter 0.3s ease;
-    transform: translateX(0);
-    width: 100vw;
-    position: relative;
-    z-index: 1000;
+#contenido-principal h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #34495e;
+  margin: 0;
+}
+#contenido-principal p {
+  font-size: 1.1rem;
+  color: #555;
+  margin: 0;
 }
 
 #contenido-principal.desplazado {
-    transform: translateX(250px);
     filter: brightness(0.6); /* oscurece el contenido desplazado */
 }
 
-/* Responsive: ocultar navbar en móvil */
-@media (max-width: 768px) {
-    header nav.navbar {
-        display: none;
-    }
+footer {
+  text-align: center;
+  padding: 15px 0;
+  font-size: 0.9rem;
+  color: #777;
+  background: #fff;
+  box-shadow: 0 -1px 5px rgba(0,0,0,0.05);
+  position: relative;
+  z-index: 1000;
 }
