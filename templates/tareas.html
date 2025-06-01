@@ -2,7 +2,7 @@
 {% block titulo %}Tareas{% endblock %}
 
 {% block contenido %}
-<h2>Tablero Kanban</h2>
+<h2>Mis tareas diarias</h2>
 
 <form method="POST" action="{{ url_for('tareas') }}" class="kanban-form">
   <input type="text" name="titulo" placeholder="Nueva tarea" required>
@@ -58,6 +58,33 @@ document.addEventListener('DOMContentLoaded', function() {
   const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'dayGridMonth',
     locale: 'es',
+    editable: true, // ✅ permite arrastrar eventos
+    eventDrop: function(info) {
+      const nuevaFecha = info.event.startStr;
+      const titulo = info.event.title;
+
+      fetch('/actualizar_tarea', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          titulo: titulo,
+          nueva_fecha: nuevaFecha
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (!data.exito) {
+          alert('Error al actualizar tarea');
+          info.revert(); // Revertir si falla
+        }
+      })
+      .catch(error => {
+        alert('Error de conexión');
+        info.revert();
+      });
+    },
     events: [
       {% for tarea in tareas %}
         {% if tarea.fecha_limite %}

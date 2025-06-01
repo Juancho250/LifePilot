@@ -120,7 +120,6 @@ def tareas():
     tareas_usuario = cursor.fetchall()
     return render_template('tareas.html', usuario=session['usuario'], tareas=tareas_usuario)
 
-
 @app.route('/gastos')
 def gastos():
     if 'logueado' in session:
@@ -143,6 +142,37 @@ def ideas():
 def cerrar_sesion():
     session.clear()
     return redirect(url_for('inicio'))
+from flask import jsonify
+
+@app.route('/actualizar_tarea', methods=['POST'])
+def actualizar_tarea():
+    if 'logueado' not in session:
+        return jsonify({'exito': False, 'error': 'No autorizado'})
+
+    data = request.get_json()
+    titulo = data.get('titulo')
+    nueva_fecha = data.get('nueva_fecha')
+
+    if not titulo or not nueva_fecha:
+        return jsonify({'exito': False, 'error': 'Datos incompletos'})
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            UPDATE tareas 
+            SET fecha_limite = %s 
+            WHERE titulo = %s AND id_usuario = %s
+        ''', (nueva_fecha, titulo, session['id_usuario']))
+        mysql.connection.commit()
+        cursor.close()
+
+        if cursor.rowcount == 0:
+            return jsonify({'exito': False, 'error': 'Tarea no encontrada'})
+
+        return jsonify({'exito': True})
+    except Exception as e:
+        return jsonify({'exito': False, 'error': str(e)})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
