@@ -4,15 +4,13 @@
 {% block contenido %}
 <h2>Tablero Kanban</h2>
 
-<!-- Formulario para agregar tarea -->
 <form method="POST" action="{{ url_for('tareas') }}" class="kanban-form">
   <input type="text" name="titulo" placeholder="Nueva tarea" required>
+  <input type="date" name="fecha_limite">
   <button type="submit">Agregar</button>
 </form>
 
-<!-- Tablero Kanban -->
 <div class="kanban-board">
-  <!-- Columna Por Hacer -->
   <div class="kanban-column">
     <h3>Por Hacer</h3>
     <div class="kanban-tasks" id="todo">
@@ -24,7 +22,6 @@
     </div>
   </div>
 
-  <!-- Columna En Proceso -->
   <div class="kanban-column">
     <h3>En Proceso</h3>
     <div class="kanban-tasks" id="in-progress">
@@ -36,7 +33,6 @@
     </div>
   </div>
 
-  <!-- Columna Completado -->
   <div class="kanban-column">
     <h3>Completado</h3>
     <div class="kanban-tasks" id="done">
@@ -49,28 +45,33 @@
   </div>
 </div>
 
-<!-- Script de arrastrar y soltar -->
+<!-- FullCalendar -->
+<h2 style="margin-top: 40px;">Calendario de Tareas</h2>
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
+<div id="calendar"></div>
+
 <script>
-  const tasks = document.querySelectorAll('.kanban-task');
-  const columns = document.querySelectorAll('.kanban-tasks');
-
-  tasks.forEach(task => {
-    task.addEventListener('dragstart', () => {
-      task.classList.add('dragging');
-    });
-
-    task.addEventListener('dragend', () => {
-      task.classList.remove('dragging');
-    });
+document.addEventListener('DOMContentLoaded', function() {
+  const calendarEl = document.getElementById('calendar');
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    locale: 'es',
+    events: [
+      {% for tarea in tareas %}
+        {% if tarea.fecha_limite %}
+        {
+          title: '{{ tarea.titulo|escape }}',
+          start: '{{ tarea.fecha_limite }}',
+          color: '{{ "green" if tarea.estado == "done" else ("orange" if tarea.estado == "in-progress" else "red") }}'
+        }{% if not loop.last %},{% endif %}
+        {% endif %}
+      {% endfor %}
+    ]
   });
-
-  columns.forEach(column => {
-    column.addEventListener('dragover', e => {
-      e.preventDefault();
-      const dragging = document.querySelector('.dragging');
-      if (dragging) column.appendChild(dragging);
-    });
-  });
+  calendar.render();
+});
 </script>
-{% endblock %}
 
+{% endblock %}

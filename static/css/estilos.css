@@ -383,74 +383,58 @@ footer {
   position: relative;
   z-index: 1000;
 }
-.kanban-form {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.kanban-form input[type="text"] {
-  padding: 10px;
-  width: 250px;
-  border: 1px solid #ccc;
-  border-radius: 6px 0 0 6px;
-}
-
-.kanban-form button {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 0 6px 6px 0;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.kanban-form button:hover {
-  background-color: #0056b3;
-}
-
 .kanban-board {
-  display: flex;
-  justify-content: space-around;
-  margin-top: 20px;
-  flex-wrap: wrap;
-}
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
 
-.kanban-column {
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  width: 30%;
-  padding: 15px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
+  .kanban-column {
+    flex: 1;
+    min-width: 250px;
+    background-color: #f0f4f8;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
 
-.kanban-column h3 {
-  text-align: center;
-  color: #343a40;
-  font-size: 1.2rem;
-  margin-bottom: 10px;
-}
+  .kanban-column h3 {
+    text-align: center;
+    color: #333;
+  }
 
-.kanban-tasks {
-  min-height: 100px;
-  padding: 10px;
-  border: 2px dashed #ccc;
-  border-radius: 6px;
-}
+  .kanban-task {
+    background-color: white;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    cursor: grab;
+  }
 
-.kanban-task {
-  background-color: #ffffff;
-  margin-bottom: 10px;
-  padding: 10px;
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-  cursor: move;
-  transition: transform 0.2s;
-}
+  .kanban-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
 
-.kanban-task.dragging {
-  opacity: 0.5;
-  transform: scale(1.05);
-}
+  .kanban-form input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+
+  .kanban-form button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  #calendar-container {
+    margin-top: 40px;
+  }

@@ -108,16 +108,18 @@ def tareas():
 
     if request.method == 'POST':
         titulo = request.form['titulo']
-        estado = 'todo'  # Estado inicial para nuevas tareas
+        estado = 'todo'
+        fecha_limite = request.form.get('fecha_limite')  # puede venir vacía
         id_usuario = session['id_usuario']
-        cursor.execute('INSERT INTO tareas (titulo, estado, id_usuario) VALUES (%s, %s, %s)', 
-                       (titulo, estado, id_usuario))
+        cursor.execute('INSERT INTO tareas (titulo, estado, id_usuario, fecha_limite) VALUES (%s, %s, %s, %s)', 
+                       (titulo, estado, id_usuario, fecha_limite))
         mysql.connection.commit()
         return redirect(url_for('tareas'))
 
     cursor.execute('SELECT * FROM tareas WHERE id_usuario = %s', (session['id_usuario'],))
     tareas_usuario = cursor.fetchall()
     return render_template('tareas.html', usuario=session['usuario'], tareas=tareas_usuario)
+
 
 @app.route('/gastos')
 def gastos():
