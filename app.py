@@ -1,65 +1,56 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import MySQLdb.cursors
+from datetime import datetime
+from collections import defaultdict
 import os
 
 app = Flask(__name__)
-
-# Configuración de la clave secreta para sesiones
 app.config['SECRET_KEY'] = 'd16f2bfa7491b82b8f9e30cf60eac02c82c648b1a93f7d9c671a3973d7eb69e5'
 
-# Configuración de la base de datos MySQL local
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'HnvPhkdaVeZ4pD'  # Asegúrate de poner tu contraseña de MySQL si tiene
+app.config['MYSQL_PASSWORD'] = 'HnvPhkdaVeZ4pD'
 app.config['MYSQL_DB'] = 'oryon_db'
 
 mysql = MySQL(app)
 
-# Ruta de inicio
-@app.route('/')
-def inicio():
-    return render_template('inicio.html')
-
-
-# Carpeta donde guardarás las fotos subidas
 CARPETA_FOTOS = 'static/uploads'
 if not os.path.exists(CARPETA_FOTOS):
     os.makedirs(CARPETA_FOTOS)
-
 app.config['CARPETA_FOTOS'] = CARPETA_FOTOS
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # Max 2MB (opcional)
-
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def archivo_permitido(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@app.route('/')
+def inicio():
+    return render_template('inicio.html')
 
-# Registro de usuario
 @app.route('/registrarse', methods=['GET', 'POST'])
 def registrarse():
     if request.method == 'POST':
         usuario = request.form['usuario']
         correo = request.form['correo']
         clave = generate_password_hash(request.form['clave'])
-
         foto = request.files.get('foto')
         nombre_foto = None
+
         if foto and archivo_permitido(foto.filename):
             filename_seguro = secure_filename(foto.filename)
-            nombre_foto = f"{usuario}_{filename_seguro}"  # evitar colisiones
+            nombre_foto = f"{usuario}_{filename_seguro}"
             ruta_completa = os.path.join(app.config['CARPETA_FOTOS'], nombre_foto)
             foto.save(ruta_completa)
-        # Si no suben foto, nombre_foto queda None
 
         cursor = mysql.connection.cursor()
         cursor.execute('''
             INSERT INTO usuarios (nombre_usuario, correo_electronico, contraseña, foto) 
             VALUES (%s, %s, %s, %s)
-            ''', (usuario, correo, clave, nombre_foto))
+        ''', (usuario, correo, clave, nombre_foto))
         mysql.connection.commit()
         cursor.close()
         flash('Usuario registrado con éxito. Ahora puedes iniciar sesión.')
@@ -67,7 +58,6 @@ def registrarse():
 
     return render_template('registrarse.html')
 
-# Inicio de sesión
 @app.route('/iniciar_sesion', methods=['GET', 'POST'])
 def iniciar_sesion():
     if request.method == 'POST':
@@ -98,7 +88,6 @@ def panel():
         return render_template('panel.html', usuario=session['usuario'], usuario_foto=foto)
     return redirect(url_for('iniciar_sesion'))
 
-
 @app.route('/tareas', methods=['GET', 'POST'])
 def tareas():
     if 'logueado' not in session:
@@ -109,7 +98,7 @@ def tareas():
     if request.method == 'POST':
         titulo = request.form['titulo']
         estado = 'todo'
-        fecha_limite = request.form.get('fecha_limite')  # puede venir vacía
+        fecha_limite = request.form.get('fecha_limite')
         id_usuario = session['id_usuario']
         cursor.execute('INSERT INTO tareas (titulo, estado, id_usuario, fecha_limite) VALUES (%s, %s, %s, %s)', 
                        (titulo, estado, id_usuario, fecha_limite))
@@ -120,29 +109,82 @@ def tareas():
     tareas_usuario = cursor.fetchall()
     return render_template('tareas.html', usuario=session['usuario'], tareas=tareas_usuario)
 
-@app.route('/gastos')
+# Función para obtener gastos del mes actual
+def obtener_gastos_mes_actual():
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    try:
+        hoy = datetime.today()
+        primer_dia = hoy.replace(day=1)
+        # Calcular el primer día del siguiente mes
+        if hoy.month == 12:
+            siguiente_mes = hoy.replace(year=hoy.year + 1, month=1, day=1)
+        else:
+            siguiente_mes = hoy.replace(month=hoy.month + 1, day=1)
+        cursor.execute("""
+            SELECT * FROM gastos 
+            WHERE fecha >= %s AND fecha < %s
+            ORDER BY fecha ASC
+        """, (primer_dia, siguiente_mes))
+        gastos = cursor.fetchall()
+    finally:
+        cursor.close()
+    return gastos
+
+# Ruta para registrar y mostrar gastos e ingresos
+@app.route('/gastos', methods=['GET', 'POST'])
 def gastos():
-    if 'logueado' in session:
-        # Aquí puedes obtener datos de gastos si usas base de datos
-        return render_template('gastos.html', usuario=session['usuario'])
-    else:
+    if 'logueado' not in session:
         return redirect(url_for('iniciar_sesion'))
+
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    try:
+        if request.method == 'POST':
+            fecha = request.form['fecha']
+            descripcion = request.form['descripcion']
+            valor = float(request.form['valor'])
+            tipo = request.form['tipo']
+            cursor.execute("""
+                INSERT INTO gastos (fecha, descripcion, valor, tipo)
+                VALUES (%s, %s, %s, %s)
+            """, (fecha, descripcion, valor, tipo))
+            mysql.connection.commit()
+
+        gastos_list = obtener_gastos_mes_actual()
+
+        ingresos = defaultdict(float)
+        egresos = defaultdict(float)
+
+        for g in gastos_list:
+            dia = g['fecha'].day
+            if g['tipo'] == 'ingreso':
+                ingresos[dia] += g['valor']
+            else:
+                egresos[dia] += g['valor']
+
+        dias = sorted(set(ingresos.keys()).union(egresos.keys()))
+        etiquetas = [str(dia) for dia in dias]
+        datos_ingresos = [ingresos[d] for d in dias]
+        datos_egresos = [egresos[d] for d in dias]
+
+        return render_template('gastos.html',
+                               gastos=gastos_list,
+                               etiquetas=etiquetas,
+                               ingresos=datos_ingresos,
+                               egresos=datos_egresos)
+    finally:
+        cursor.close()
 
 @app.route('/ideas')
 def ideas():
     if 'logueado' in session:
-        # Aquí puedes obtener datos de ideas si usas base de datos
         return render_template('ideas.html', usuario=session['usuario'])
     else:
         return redirect(url_for('iniciar_sesion'))
 
-
-# Cierre de sesión
 @app.route('/cerrar_sesion')
 def cerrar_sesion():
     session.clear()
     return redirect(url_for('inicio'))
-from flask import jsonify
 
 @app.route('/actualizar_tarea', methods=['POST'])
 def actualizar_tarea():
@@ -172,7 +214,6 @@ def actualizar_tarea():
         return jsonify({'exito': True})
     except Exception as e:
         return jsonify({'exito': False, 'error': str(e)})
-
 
 if __name__ == '__main__':
     app.run(debug=True)
