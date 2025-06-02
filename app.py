@@ -155,11 +155,12 @@ def gastos():
         egresos = defaultdict(float)
 
         for g in gastos_list:
-            dia = g['fecha'].day
-            if g['tipo'] == 'ingreso':
-                ingresos[dia] += g['valor']
-            else:
-                egresos[dia] += g['valor']
+         dia = g['fecha'].day
+         valor = float(g['valor'])  # convertir a float explícitamente
+         if g['tipo'] == 'ingreso':
+           ingresos[dia] += valor
+         else:
+           egresos[dia] += valor
 
         dias = sorted(set(ingresos.keys()).union(egresos.keys()))
         etiquetas = [str(dia) for dia in dias]
