@@ -438,3 +438,77 @@ footer {
   #calendar-container {
     margin-top: 40px;
   }
+  /*estilos para las idesas*/
+
+.ideas-page {
+  max-width: 900px;
+  margin: auto;
+  padding: 30px;
+  background-color: #fdfdfd;
+}
+
+.ideas-page h2 {
+  text-align: center;
+  color: #4a4a4a;
+  margin-bottom: 20px;
+}
+
+.inspiracion {
+  background: #e3f2fd;
+  padding: 20px;
+  border-left: 5px solid #2196f3;
+  margin-bottom: 30px;
+  border-radius: 8px;
+}
+
+.sugerencia-box {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #fff3cd;
+  border: 1px dashed #ffc107;
+  border-radius: 6px;
+  font-style: italic;
+}
+
+.form-idea {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.form-idea input,
+.form-idea textarea {
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1em;
+}
+
+.form-idea button {
+  align-self: flex-start;
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.form-idea button:hover {
+  background-color: #388e3c;
+}
+
+.lista-ideas {
+  border-top: 2px solid #ddd;
+  padding-top: 20px;
+}
+
+.idea-item {
+  border: 1px solid #ccc;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+  margin-bottom: 15px;
+}
+  

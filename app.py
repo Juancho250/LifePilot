@@ -175,13 +175,6 @@ def gastos():
     finally:
         cursor.close()
 
-@app.route('/ideas')
-def ideas():
-    if 'logueado' in session:
-        return render_template('ideas.html', usuario=session['usuario'])
-    else:
-        return redirect(url_for('iniciar_sesion'))
-
 @app.route('/cerrar_sesion')
 def cerrar_sesion():
     session.clear()
@@ -215,6 +208,57 @@ def actualizar_tarea():
         return jsonify({'exito': True})
     except Exception as e:
         return jsonify({'exito': False, 'error': str(e)})
+    
+@app.route("/ideas", methods=["GET", "POST"])
+def ideas():
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    if request.method == "POST":
+        titulo = request.form["titulo"]
+        descripcion = request.form["descripcion"]
+        categoria = request.form.get("categoria", "")
+
+        cursor.execute(
+            "INSERT INTO ideas (titulo, descripcion, categoria) VALUES (%s, %s, %s)",
+            [titulo, descripcion, categoria]
+        )
+        mysql.connection.commit()
+        flash("Idea registrada con éxito", "success")
+        return redirect(url_for("ideas"))
+
+    cursor.execute("SELECT * FROM ideas ORDER BY fecha_creacion DESC")
+    ideas = cursor.fetchall()
+    return render_template("ideas.html", ideas=ideas)
+
+@app.route("/eliminar_idea/<int:id>")
+def eliminar_idea(id):
+    cursor = mysql.connection.cursor()
+    cursor.execute("DELETE FROM ideas WHERE id = %s", [id])
+    mysql.connection.commit()
+    flash("Idea eliminada", "info")
+    return redirect(url_for("ideas"))
+
+@app.route("/editar_idea/<int:id>", methods=["GET", "POST"])
+def editar_idea(id):
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    if request.method == "POST":
+        titulo = request.form["titulo"]
+        descripcion = request.form["descripcion"]
+        categoria = request.form["categoria"]
+
+        cursor.execute(
+            "UPDATE ideas SET titulo = %s, descripcion = %s, categoria = %s WHERE id = %s",
+            [titulo, descripcion, categoria, id]
+        )
+        mysql.connection.commit()
+        flash("Idea actualizada", "success")
+        return redirect(url_for("ideas"))
+
+    cursor.execute("SELECT * FROM ideas WHERE id = %s", [id])
+    idea = cursor.fetchone()
+    return render_template("editar_idea.html", idea=idea)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

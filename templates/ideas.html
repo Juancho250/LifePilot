@@ -1,6 +1,72 @@
 {% extends "base.html" %}
-{% block titulo %}Ideas{% endblock %}
+
+{% block titulo %}Centro de Ideas Creativas{% endblock %}
+
 {% block contenido %}
-<h2>Mis Ideas</h2>
-<p>Aquí va la lista de Ideas...</p>
+<div class="ideas-page">
+  <h2>💡 Espacio Creativo: Generación de Ideas e Ingresos</h2>
+
+  <!-- Área de inspiración -->
+  <section class="inspiracion">
+    <p>Piensa en proyectos, servicios, productos o soluciones que podrías ofrecer. Este es tu laboratorio creativo.</p>
+    <button onclick="generarSugerencia()">Dame una sugerencia 💭</button>
+    <div id="sugerencia" class="sugerencia-box"></div>
+  </section>
+
+  <!-- Formulario para nuevas ideas -->
+  <form class="form-idea" method="POST" action="{{ url_for('ideas') }}">
+    <input type="text" name="titulo" placeholder="Título de la idea" required>
+    <textarea name="descripcion" rows="4" placeholder="Describe tu idea..." required></textarea>
+    <input type="text" name="categoria" placeholder="Categoría (opcional)">
+    <button type="submit">Guardar Idea</button>
+  </form>
+
+  <!-- Mostrar mensaje flash -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- Lista de ideas guardadas -->
+  <section class="lista-ideas">
+    <h3>📋 Mis Ideas</h3>
+    {% if ideas %}
+      {% for idea in ideas %}
+        <div class="idea-item">
+          <strong>{{ idea.titulo }}</strong>
+          <p>{{ idea.descripcion }}</p>
+          {% if idea.categoria %}
+            <span class="categoria">📁 {{ idea.categoria }}</span>
+          {% endif %}
+          <div class="acciones">
+            <a href="{{ url_for('editar_idea', id=idea.id) }}" class="btn btn-sm btn-warning">✏️ Editar</a>
+            <a href="{{ url_for('eliminar_idea', id=idea.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro de eliminar esta idea?')">🗑️ Eliminar</a>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>No tienes ideas guardadas aún. ¡Empieza ahora!</p>
+    {% endif %}
+  </section>
+</div>
+
+<script>
+  const sugerencias = [
+    "Crea un canal de YouTube sobre tus habilidades técnicas.",
+    "Ofrece asesorías personalizadas en soporte técnico.",
+    "Desarrolla una app para freelancers.",
+    "Escribe un curso básico de mantenimiento de computadores.",
+    "Haz una tienda virtual de componentes o periféricos.",
+    "Ofrece paquetes de mantenimiento preventivo a pequeñas empresas.",
+    "Desarrolla una página de gestión de ingresos para terceros.",
+  ];
+
+  function generarSugerencia() {
+    const index = Math.floor(Math.random() * sugerencias.length);
+    document.getElementById("sugerencia").innerText = sugerencias[index];
+  }
+</script>
 {% endblock %}
