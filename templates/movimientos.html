@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block titulo %}Gestión de movimientos{% endblock %}
+
+{% block contenido %}
+<h2 class="titulo">Registro de Movimientos</h2>
+
+<h3>Saldo Actual: <strong>${{ "%.2f"|format(saldo_actual) }}</strong></h3>
+
+<form method="POST" action="{{ url_for('movimientos') }}" class="form-movimientos">
+  <input type="date" name="fecha" required>
+  <input type="text" name="descripcion" placeholder="Descripción" required>
+  <input type="number" name="valor" step="0.01" placeholder="Valor" required>
+
+  <select name="tipo" id="tipoSelect" onchange="toggleDeudaSelect()">
+    <option value="ingreso">Ingreso</option>
+    <option value="gasto">Gasto</option>
+    <option value="deuda">Deuda (lo que debo)</option>
+    <option value="a_recibir">Dinero a recibir (lo que me deben)</option>
+    <option value="abono_deuda">Abono a deuda</option>
+    <option value="abono_a_recibir">Abono a dinero a recibir</option>
+  </select>
+
+  <select name="deuda_id" id="deudaSelect" style="display:none;">
+    <option value="">-- Selecciona deuda/dinero a recibir --</option>
+    {% for deuda in deudas %}
+      <option value="{{ deuda.id }}">{{ deuda.descripcion }} (Saldo: ${{ "%.2f"|format(deuda.saldo) }})</option>
+    {% endfor %}
+  </select>
+
+  <button type="submit">Registrar</button>
+</form>
+
+<hr class="divider">
+
+
+
+
+<form method="GET" action="{{ url_for('movimientos') }}" class="filtros-form">
+  <label>Desde: <input type="date" name="fecha_desde" value="{{ request.args.get('fecha_desde', '') }}"></label>
+  <label>Hasta: <input type="date" name="fecha_hasta" value="{{ request.args.get('fecha_hasta', '') }}"></label>
+  <input type="hidden" name="seccion" value="{{ request.args.get('seccion', 'deudas') }}">
+
+  <label>Ordenar por:
+    <select name="ordenar">
+      <option value="fecha_desc" {% if request.args.get('ordenar') == 'fecha_desc' %}selected{% endif %}>Fecha (desc)</option>
+      <option value="fecha_asc" {% if request.args.get('ordenar') == 'fecha_asc' %}selected{% endif %}>Fecha (asc)</option>
+      <option value="valor_desc" {% if request.args.get('ordenar') == 'valor_desc' %}selected{% endif %}>Valor (mayor a menor)</option>
+      <option value="valor_asc" {% if request.args.get('ordenar') == 'valor_asc' %}selected{% endif %}>Valor (menor a mayor)</option>
+    </select>
+  </label>
+
+  <button type="submit">Filtrar</button>
+</form>
+
+<!-- botones de secciones -->
+<div>
+  <button type="button" id="btnDeudas" class="boton-seccion {% if seccion != 'ingresos' %}activo{% endif %}" onclick="cambiarSeccion('deudas')">
+    Deudas y Prestamos
+  </button>
+  <button type="button" id="btnIngresos" class="boton-seccion {% if seccion == 'ingresos' %}activo{% endif %}" onclick="cambiarSeccion('ingresos')">
+    Ingresos y Gastos
+  </button>
+</div>
+
+<div id="seccionDeudas" class="seccion {% if seccion != 'ingresos' %}activa{% endif %}">
+  <div class="tabla-responsive">
+    <table class="tabla-movimientos">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Descripción</th>
+          <th>Valor</th>
+          <th>Tipo</th>
+          <th>Saldo Pendiente</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in movimientos if item.tipo in ['deuda', 'a_recibir', 'abono_deuda', 'abono_a_recibir'] %}
+        <tr>
+          <td>{{ item.fecha }}</td>
+          <td>{{ item.descripcion }}</td>
+          <td>${{ "%.2f"|format(item.valor) }}</td>
+          <td>{{ item.tipo|capitalize }}</td>
+          <td>
+            {% if item.tipo in ['deuda', 'a_recibir'] %}
+              ${{ "%.2f"|format(item.saldo) }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            <button type="button" onclick="abrirModalEditar({{ item.id }}, '{{ item.fecha }}', '{{ item.descripcion|escapejs }}', {{ item.valor }}, '{{ item.tipo }}', {{ item.deuda_id or 'null' }})">Editar</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="seccionIngresos" class="seccion {% if seccion == 'ingresos' %}activa{% endif %}">
+  <div class="tabla-responsive">
+    <table class="tabla-movimientos">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Descripción</th>
+          <th>Valor</th>
+          <th>Tipo</th>
+          <th>Saldo Pendiente</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in movimientos if item.tipo in ['ingreso', 'gasto'] %}
+        <tr>
+          <td>{{ item.fecha }}</td>
+          <td>{{ item.descripcion }}</td>
+          <td>${{ "%.2f"|format(item.valor) }}</td>
+          <td>{{ item.tipo|capitalize }}</td>
+          <td>-</td>
+          <td>
+            <button type="button" onclick="abrirModalEditar({{ item.id }}, {{ item.descripcion|tojson }})">Editar</button>
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+
+
+<!-- Modal editar -->
+<div id="modalEditar" class="modal" aria-hidden="true" role="dialog" aria-labelledby="modalTitulo" aria-modal="true" style="display:none;">
+  <div class="modal-contenido">
+    <button class="cerrar" aria-label="Cerrar modal" onclick="cerrarModalEditar()">&times;</button>
+    <h2 id="modalTitulo">Editar Movimiento</h2>
+    <form id="formEditar" method="POST">
+      <input type="hidden" name="movimiento_id" id="editarId">
+
+      <!-- Este es el único input que se edita -->
+      <input type="text" name="descripcion" id="editarDescripcion" placeholder="Descripción" required autocomplete="off" autofocus>
+
+      <button type="submit" class="btn-guardar">Guardar cambios</button>
+    </form>
+  </div>
+</div>
+
+
+
+{% endblock %}

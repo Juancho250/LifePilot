@@ -15,7 +15,7 @@
             {% if session.get('logueado') %}
                 <li><a href="{{ url_for('panel') }}">Panel</a></li>
                 <li><a href="{{ url_for('tareas') }}">Tareas</a></li>
-                <li><a href="{{ url_for('gastos') }}">Gastos</a></li>
+                <li><a href="{{ url_for('movimientos') }}">Movimientos</a></li>
                 <li><a href="{{ url_for('ideas') }}">Ideas</a></li>
                 <li><a href="{{ url_for('cerrar_sesion') }}">Cerrar sesión ({{ session.get('usuario') }})</a></li>
             {% else %}
@@ -74,5 +74,107 @@
             body.classList.toggle('menu-activo');
         }
     </script>
+
+   <script>
+        // Mostrar u ocultar select de deuda según tipo en formulario principal
+        function toggleDeudaSelect() {
+            const tipo = document.getElementById('tipoSelect').value;
+            const deudaSelect = document.getElementById('deudaSelect');
+
+            if (tipo === 'abono_deuda' || tipo === 'abono_a_recibir') {
+            deudaSelect.style.display = 'inline-block';
+            deudaSelect.required = true;
+            } else {
+            deudaSelect.style.display = 'none';
+            deudaSelect.required = false;
+            deudaSelect.value = '';  // Limpiar selección si se oculta
+            }
+        }
+
+        // Mostrar u ocultar select de deuda según tipo en modal editar
+        function toggleEditarDeudaSelect() {
+            const tipo = document.getElementById('editarTipo').value;
+            const deudaSelect = document.getElementById('editarDeudaSelect');
+
+            if (tipo === 'abono_deuda' || tipo === 'abono_a_recibir') {
+            deudaSelect.style.display = 'inline-block';
+            deudaSelect.required = true;
+            } else {
+            deudaSelect.style.display = 'none';
+            deudaSelect.required = false;
+            deudaSelect.value = ''; // Limpiar selección si se oculta
+            }
+        }
+    </script>
+
+    
+
+
+    <script>
+        function capitalizePrimeraLetra(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        function mostrarSeccion(seccion) {
+            const secciones = ['deudas', 'ingresos'];
+            secciones.forEach(s => {
+                document.getElementById('seccion' + capitalizePrimeraLetra(s)).classList.remove('activa');
+                document.getElementById('btn' + capitalizePrimeraLetra(s)).classList.remove('activo');
+            });
+            document.getElementById('seccion' + capitalizePrimeraLetra(seccion)).classList.add('activa');
+            document.getElementById('btn' + capitalizePrimeraLetra(seccion)).classList.add('activo');
+        }
+
+        function cambiarSeccion(seccion) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('seccion', seccion);
+            window.location.href = url.toString();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const seccion = new URLSearchParams(window.location.search).get("seccion") || "deudas";
+            mostrarSeccion(seccion);
+        });
+    </script>
+
+
+
+
+
+   <script>
+        function abrirModalEditar(id, descripcion) {
+            const modal = document.getElementById('modalEditar');
+            modal.classList.add('show');
+
+            document.getElementById('editarId').value = id;
+            document.getElementById('editarDescripcion').value = descripcion;
+
+            document.getElementById('formEditar').action = '/movimientos/editar/' + id;
+        }
+
+        function cerrarModalEditar() {
+            const modal = document.getElementById('modalEditar');
+            modal.classList.remove('show');
+        }
+
+        // Opcional: cerrar al hacer clic fuera del modal
+        window.addEventListener('click', function (e) {
+            const modal = document.getElementById('modalEditar');
+            if (e.target === modal) cerrarModalEditar();
+        });
+
+        // Opcional: cerrar con Escape
+        window.addEventListener('keydown', function (e) {
+            const modal = document.getElementById('modalEditar');
+            if (e.key === 'Escape' && modal.classList.contains('show')) {
+            cerrarModalEditar();
+            }
+        });
+    </script>
+
+
+
+
+
 </body>
 </html>
