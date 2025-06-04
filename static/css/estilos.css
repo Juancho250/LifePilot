@@ -523,6 +523,17 @@ footer {
   color: #333;
 }
 
+.tipo-ingreso {
+  color: #27ae60 !important; /* Verde */
+  font-weight: 600;
+}
+
+.tipo-gasto {
+  color: #e74c3c !important; /* Rojo */
+  font-weight: 600;
+}
+
+
 .form-movimientos {
   display: flex;
   flex-wrap: wrap;

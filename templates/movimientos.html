@@ -119,7 +119,12 @@
           <td>{{ item.fecha }}</td>
           <td>{{ item.descripcion }}</td>
           <td>${{ "%.2f"|format(item.valor) }}</td>
-          <td>{{ item.tipo|capitalize }}</td>
+          <td class="{% if item.tipo == 'ingreso' %}tipo-ingreso{% elif item.tipo == 'gasto' %}tipo-gasto{% endif %}">
+            {{ item.tipo|capitalize }}
+          </td>
+
+
+
           <td>-</td>
           <td>
             <button type="button" onclick="abrirModalEditar({{ item.id }}, {{ item.descripcion|tojson }})">Editar</button>
