@@ -1,4 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, current_app
+from io import BytesIO
+from xhtml2pdf import pisa
+import base64
 from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -372,7 +375,72 @@ def editar_movimiento(movimiento_id):
 
 
 
+@app.route('/exportar_pdf', methods=['GET'])
+def exportar_pdf():
+    if 'logueado' not in session:
+        return redirect(url_for('iniciar_sesion'))
 
+    fecha_desde = request.args.get('fecha_desde')
+    fecha_hasta = request.args.get('fecha_hasta')
+    ordenar = request.args.get('ordenar')
+    seccion = request.args.get('seccion', 'deudas')
+    usuario_id = session['usuario_id']
+
+    # Construir consulta SQL con filtros y seccion
+    query = '''
+        SELECT * FROM movimientos
+        WHERE usuario_id = %s
+    '''
+    params = [usuario_id]
+
+    if fecha_desde:
+        query += ' AND fecha >= %s'
+        params.append(fecha_desde)
+    if fecha_hasta:
+        query += ' AND fecha <= %s'
+        params.append(fecha_hasta)
+
+    if seccion == 'ingresos':
+        query += " AND tipo IN ('ingreso', 'gasto')"
+    else:
+        query += " AND tipo IN ('deuda', 'a_recibir', 'abono_a_recibir', 'abono_deuda')"
+
+    if ordenar == 'fecha_asc':
+        query += ' ORDER BY fecha ASC'
+    elif ordenar == 'fecha_desc':
+        query += ' ORDER BY fecha DESC'
+    elif ordenar == 'valor_asc':
+        query += ' ORDER BY valor ASC'
+    elif ordenar == 'valor_desc':
+        query += ' ORDER BY valor DESC'
+
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute(query, tuple(params))
+    movimientos = cursor.fetchall()
+    cursor.close()
+
+    # Leer logo y convertir a base64
+    logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo.png')
+    with open(logo_path, 'rb') as image_file:
+        logo_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+
+    rendered_html = render_template('pdf_movimientos.html',
+                                    movimientos=movimientos,
+                                    seccion=seccion,
+                                    logo_base64=logo_base64)
+
+    pdf_output = BytesIO()
+    pisa_status = pisa.CreatePDF(rendered_html, dest=pdf_output)
+
+    if pisa_status.err:
+        return f"Error al generar PDF: {pisa_status.err}"
+
+    pdf_output.seek(0)
+
+    return send_file(pdf_output,
+                     as_attachment=True,
+                     download_name='movimientos_filtrados.pdf',
+                     mimetype='application/pdf')
 
 
 

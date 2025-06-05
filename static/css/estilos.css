@@ -538,8 +538,7 @@ footer {
 .form-movimientos button,
 .filtros-form input,
 .filtros-form select {
-  padding: 10px;
-  font-size: 1rem;
+  font-size: 2vh;
   border: 1px solid #ccc;
   border-radius: 8px;
   min-width: 160px;
@@ -552,7 +551,7 @@ footer {
   color: white;
   border: none;
   transition: background-color 0.3s ease;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   border-radius: 8px;
 }

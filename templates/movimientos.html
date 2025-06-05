@@ -36,9 +36,14 @@
 
 
 
-<form method="GET" action="{{ url_for('movimientos') }}" class="filtros-form">
-  <label>Desde: <input type="date" name="fecha_desde" value="{{ request.args.get('fecha_desde', '') }}"></label>
-  <label>Hasta: <input type="date" name="fecha_hasta" value="{{ request.args.get('fecha_hasta', '') }}"></label>
+<form method="GET" class="filtros-form">
+  <label>Desde:
+    <input type="date" name="fecha_desde" value="{{ request.args.get('fecha_desde', '') }}">
+  </label>
+  <label>Hasta:
+    <input type="date" name="fecha_hasta" value="{{ request.args.get('fecha_hasta', '') }}">
+  </label>
+
   <input type="hidden" name="seccion" value="{{ request.args.get('seccion', 'deudas') }}">
 
   <label>Ordenar por:
@@ -50,8 +55,11 @@
     </select>
   </label>
 
-  <button type="submit">Filtrar</button>
+  <button type="submit" formaction="{{ url_for('movimientos') }}">Filtrar</button>
+  <button type="submit" formaction="{{ url_for('exportar_pdf') }}">Exportar a PDF</button>
 </form>
+
+
 
 <!-- botones de secciones -->
 <div>
@@ -77,21 +85,35 @@
         </tr>
       </thead>
       <tbody>
-        {% for item in movimientos if item.tipo in ['ingreso', 'gasto'] %}
-          <tr>
-            <td>{{ item.fecha }}</td>
-            <td>{{ item.descripcion }}</td>
-            <td>${{ "%.2f"|format(item.valor) }}</td>
-            <td class="{% if item.tipo == 'ingreso' %}tipo-ingreso{% elif item.tipo == 'gasto' %}tipo-gasto{% endif %}">
-              {{ item.tipo|capitalize }}
-            </td>
-            <td>-</td>  <!-- Por ejemplo, porque no tiene saldo pendiente -->
-            <td>
-              <button onclick="abrirModalEditar({{ item.id }}, '{{ item.descripcion|escapejs }}')">Editar</button>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
+  {% for item in movimientos if item.tipo in ['deuda', 'a_recibir', 'abono_a_recibir', 'abono_deuda'] %}
+    <tr>
+      <td>{{ item.fecha }}</td>
+      <td>{{ item.descripcion }}</td>
+      <td>
+        {% if item.valor is not none %}
+          ${{ "%.2f"|format(item.valor) }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td class="tipo-{{ item.tipo }}">
+        {{ item.tipo|replace('_', ' ')|capitalize }}
+      </td>
+      <td>
+        {% if item.saldo is defined and item.saldo is not none %}
+          ${{ "%.2f"|format(item.saldo) }}
+        {% else %}
+          -
+        {% endif %}
+      </td>
+      <td>
+        <button onclick="abrirModalEditar({{ item.id }}, '{{ item.descripcion|escapejs }}')">Editar</button>
+      </td>
+    </tr>
+  {% endfor %}
+</tbody>
+
+
     </table>
   </div>
 </div>
