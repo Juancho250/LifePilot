@@ -77,23 +77,19 @@
         </tr>
       </thead>
       <tbody>
-        {% for item in movimientos if item.tipo in ['deuda', 'a_recibir', 'abono_deuda', 'abono_a_recibir'] %}
-        <tr>
-          <td>{{ item.fecha }}</td>
-          <td>{{ item.descripcion }}</td>
-          <td>${{ "%.2f"|format(item.valor) }}</td>
-          <td>{{ item.tipo|capitalize }}</td>
-          <td>
-            {% if item.tipo in ['deuda', 'a_recibir'] %}
-              ${{ "%.2f"|format(item.saldo) }}
-            {% else %}
-              -
-            {% endif %}
-          </td>
-          <td>
-            <button type="button" onclick="abrirModalEditar({{ item.id }}, '{{ item.fecha }}', '{{ item.descripcion|escapejs }}', {{ item.valor }}, '{{ item.tipo }}', {{ item.deuda_id or 'null' }})">Editar</button>
-          </td>
-        </tr>
+        {% for item in movimientos if item.tipo in ['ingreso', 'gasto'] %}
+          <tr>
+            <td>{{ item.fecha }}</td>
+            <td>{{ item.descripcion }}</td>
+            <td>${{ "%.2f"|format(item.valor) }}</td>
+            <td class="{% if item.tipo == 'ingreso' %}tipo-ingreso{% elif item.tipo == 'gasto' %}tipo-gasto{% endif %}">
+              {{ item.tipo|capitalize }}
+            </td>
+            <td>-</td>  <!-- Por ejemplo, porque no tiene saldo pendiente -->
+            <td>
+              <button onclick="abrirModalEditar({{ item.id }}, '{{ item.descripcion|escapejs }}')">Editar</button>
+            </td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -109,7 +105,6 @@
           <th>Descripción</th>
           <th>Valor</th>
           <th>Tipo</th>
-          <th>Saldo Pendiente</th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -122,14 +117,9 @@
           <td class="{% if item.tipo == 'ingreso' %}tipo-ingreso{% elif item.tipo == 'gasto' %}tipo-gasto{% endif %}">
             {{ item.tipo|capitalize }}
           </td>
-
-
-
-          <td>-</td>
           <td>
-            <button type="button" onclick="abrirModalEditar({{ item.id }}, {{ item.descripcion|tojson }})">Editar</button>
+            <button onclick="abrirModalEditar({{ item.id }}, '{{ item.descripcion|escapejs }}')">Editar</button>
           </td>
-
         </tr>
         {% endfor %}
       </tbody>
@@ -141,20 +131,14 @@
 
 
 <!-- Modal editar -->
-<div id="modalEditar" class="modal" aria-hidden="true" role="dialog" aria-labelledby="modalTitulo" aria-modal="true" style="display:none;">
-  <div class="modal-contenido">
-    <button class="cerrar" aria-label="Cerrar modal" onclick="cerrarModalEditar()">&times;</button>
-    <h2 id="modalTitulo">Editar Movimiento</h2>
+<div id="modalEditar" class="modal"> <!-- o cualquier clase/modal -->
     <form id="formEditar" method="POST">
-      <input type="hidden" name="movimiento_id" id="editarId">
-
-      <!-- Este es el único input que se edita -->
-      <input type="text" name="descripcion" id="editarDescripcion" placeholder="Descripción" required autocomplete="off" autofocus>
-
-      <button type="submit" class="btn-guardar">Guardar cambios</button>
+        <input type="hidden" id="editarId" name="id">
+        <input type="text" id="editarDescripcion" name="descripcion">
+        <button type="submit">Guardar</button>
     </form>
-  </div>
 </div>
+
 
 
 

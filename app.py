@@ -112,6 +112,11 @@ def panel():
         return render_template('panel.html', usuario=session['usuario'], usuario_foto=foto)
     return redirect(url_for('iniciar_sesion'))
 
+
+
+#---------------------------------------#
+#----Funciones de la seccion tareas-----#
+#---------------------------------------#
 @app.route('/tareas', methods=['GET', 'POST'])
 def tareas():
     if 'logueado' not in session:
@@ -132,6 +137,37 @@ def tareas():
     cursor.execute('SELECT * FROM tareas WHERE usuario_id = %s', (session['usuario_id'],))
     tareas_usuario = cursor.fetchall()
     return render_template('tareas.html', usuario=session['usuario'], tareas=tareas_usuario)
+
+#Actualizar tarea#
+@app.route('/actualizar_tarea', methods=['POST'])
+def actualizar_tarea():
+    if 'logueado' not in session:
+        return jsonify({'exito': False, 'error': 'No autorizado'})
+
+    data = request.get_json()
+    titulo = data.get('titulo')
+    nueva_fecha = data.get('nueva_fecha')
+
+    if not titulo or not nueva_fecha:
+        return jsonify({'exito': False, 'error': 'Datos incompletos'})
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            UPDATE tareas 
+            SET fecha_limite = %s 
+            WHERE titulo = %s AND usuario_id = %s
+        ''', (nueva_fecha, titulo, session['usuario_id']))
+        mysql.connection.commit()
+        cursor.close()
+
+        if cursor.rowcount == 0:
+            return jsonify({'exito': False, 'error': 'Tarea no encontrada'})
+
+        return jsonify({'exito': True})
+    except Exception as e:
+        return jsonify({'exito': False, 'error': str(e)})
+
 
 
 
@@ -338,39 +374,16 @@ def editar_movimiento(movimiento_id):
 
 
 
+
+
 @app.route('/cerrar_sesion')
 def cerrar_sesion():
     session.clear()
     return redirect(url_for('inicio'))
 
-@app.route('/actualizar_tarea', methods=['POST'])
-def actualizar_tarea():
-    if 'logueado' not in session:
-        return jsonify({'exito': False, 'error': 'No autorizado'})
 
-    data = request.get_json()
-    titulo = data.get('titulo')
-    nueva_fecha = data.get('nueva_fecha')
 
-    if not titulo or not nueva_fecha:
-        return jsonify({'exito': False, 'error': 'Datos incompletos'})
 
-    try:
-        cursor = mysql.connection.cursor()
-        cursor.execute('''
-            UPDATE tareas 
-            SET fecha_limite = %s 
-            WHERE titulo = %s AND usuario_id = %s
-        ''', (nueva_fecha, titulo, session['usuario_id']))
-        mysql.connection.commit()
-        cursor.close()
-
-        if cursor.rowcount == 0:
-            return jsonify({'exito': False, 'error': 'Tarea no encontrada'})
-
-        return jsonify({'exito': True})
-    except Exception as e:
-        return jsonify({'exito': False, 'error': str(e)})
     
 @app.route("/ideas", methods=["GET", "POST"])
 def ideas():

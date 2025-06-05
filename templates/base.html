@@ -143,6 +143,8 @@
 
    <script>
         function abrirModalEditar(id, descripcion) {
+            console.log("ID:", id, "Descripcion:", descripcion);  // 👈 Verifica qué datos llegan
+            
             const modal = document.getElementById('modalEditar');
             modal.classList.add('show');
 
@@ -151,6 +153,7 @@
 
             document.getElementById('formEditar').action = '/movimientos/editar/' + id;
         }
+
 
         function cerrarModalEditar() {
             const modal = document.getElementById('modalEditar');
