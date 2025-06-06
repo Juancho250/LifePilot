@@ -7,6 +7,7 @@ from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import pymysql
+pymysql.install_as_MySQLdb()
 import MySQLdb.cursors
 from datetime import datetime
 from collections import defaultdict
