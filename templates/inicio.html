@@ -5,12 +5,10 @@
 {% block titulo %}Inicio{% endblock %}
 
 {% block contenido %}
-<div class="inicio-contenedor">
 
   <!-- Logo + Nombre -->
   <div class="logo-nombre">
-    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo ORYON" class="logo" />
-    <h1>ORYON</h1>
+    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Logo ORYON" class="logo" />
   </div>
 
   <!-- Mensaje de bienvenida -->
@@ -28,5 +26,4 @@
   <p class="saludo">¡Hola <strong>{{ session.get('usuario') }}</strong>! Ve a tu <a href="{{ url_for('panel') }}">Panel</a>.</p>
   {% endif %}
 
-</div>
 {% endblock %}

@@ -1,10 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, current_app
+from dotenv import load_dotenv
 from io import BytesIO
 from xhtml2pdf import pisa
 import base64
 from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+import pymysql
 import MySQLdb.cursors
 from datetime import datetime
 from collections import defaultdict
@@ -13,6 +15,18 @@ from decimal import Decimal
 import os
 
 app = Flask(__name__)
+
+
+# Configurar MySQL (Flask-MySQLdb)
+app.config['MYSQL_HOST'] = os.environ.get("MYSQLHOST") or os.environ.get("DB_HOST")
+app.config['MYSQL_USER'] = os.environ.get("MYSQLUSER") or os.environ.get("DB_USER")
+app.config['MYSQL_PASSWORD'] = os.environ.get("MYSQLPASSWORD") or os.environ.get("DB_PASS")
+app.config['MYSQL_DB'] = os.environ.get("MYSQLDATABASE") or os.environ.get("DB_NAME")
+app.config['MYSQL_PORT'] = int(os.environ.get("MYSQLPORT") or os.environ.get("DB_PORT", 3306))
+
+# Inicializar MySQL
+mysql = MySQL(app)
+
 
 # Filtro personalizado para escapar texto en JavaScript
 def escapejs_filter(value):
@@ -35,12 +49,25 @@ app.jinja_env.filters['escapejs'] = escapejs_filter
 
 app.config['SECRET_KEY'] = 'd16f2bfa7491b82b8f9e30cf60eac02c82c648b1a93f7d9c671a3973d7eb69e5'
 
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'HnvPhkdaVeZ4pD'
-app.config['MYSQL_DB'] = 'oryon_db'
 
-mysql = MySQL(app)
+
+# Carga el archivo .env.local si estás en local
+env = os.getenv("ENV", "local")
+if env == "local":
+    load_dotenv(".env.local")  # solo carga localmente
+
+# Conexión usando variables de entorno
+conn = pymysql.connect(
+    host=os.environ.get("MYSQLHOST") or os.environ.get("DB_HOST"),
+    port=int(os.environ.get("MYSQLPORT") or os.environ.get("DB_PORT", 3306)),
+    user=os.environ.get("MYSQLUSER") or os.environ.get("DB_USER"),
+    password=os.environ.get("MYSQLPASSWORD") or os.environ.get("DB_PASS"),
+    database=os.environ.get("MYSQLDATABASE") or os.environ.get("DB_NAME")
+)
+
+
+print("✅ Conectado a la base de datos correctamente.")
+
 
 CARPETA_FOTOS = 'static/uploads'
 if not os.path.exists(CARPETA_FOTOS):
@@ -71,6 +98,7 @@ def registrarse():
             ruta_completa = os.path.join(app.config['CARPETA_FOTOS'], nombre_foto)
             foto.save(ruta_completa)
 
+        # ✅ Definir cursor aquí
         cursor = mysql.connection.cursor()
         cursor.execute('''
             INSERT INTO usuarios (nombre_usuario, correo_electronico, contraseña, foto) 
@@ -78,10 +106,12 @@ def registrarse():
         ''', (usuario, correo, clave, nombre_foto))
         mysql.connection.commit()
         cursor.close()
+
         flash('Usuario registrado con éxito. Ahora puedes iniciar sesión.')
         return redirect(url_for('iniciar_sesion'))
 
     return render_template('registrarse.html')
+
 
 
 @app.route('/iniciar_sesion', methods=['GET', 'POST'])
@@ -90,19 +120,22 @@ def iniciar_sesion():
         usuario = request.form['usuario']
         clave = request.form['clave']
 
+        # ✅ Definir cursor correctamente
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute('SELECT * FROM usuarios WHERE nombre_usuario = %s', (usuario,))
         cuenta = cursor.fetchone()
+        cursor.close()  # ✅ Cierra el cursor después de usarlo
 
         if cuenta and check_password_hash(cuenta['contraseña'], clave):
             session['logueado'] = True
             session['usuario_id'] = cuenta['id']  # ✅ Usa SIEMPRE 'usuario_id'
             session['usuario'] = cuenta['nombre_usuario']
-            return redirect(url_for('panel'))  # o 'movimientos'
+            return redirect(url_for('panel'))
         else:
             flash('Nombre de usuario o contraseña incorrectos')
 
     return render_template('iniciar_sesion.html')
+
 
 
 @app.route('/panel')
@@ -111,8 +144,10 @@ def panel():
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute('SELECT foto FROM usuarios WHERE id = %s', (session['usuario_id'],))
         resultado = cursor.fetchone()
+        cursor.close()  # ✅ Siempre cerrar el cursor
         foto = resultado['foto'] if resultado and resultado['foto'] else None
         return render_template('panel.html', usuario=session['usuario'], usuario_foto=foto)
+
     return redirect(url_for('iniciar_sesion'))
 
 
@@ -132,14 +167,20 @@ def tareas():
         estado = 'todo'
         fecha_limite = request.form.get('fecha_limite')
         usuario_id = session['usuario_id']
-        cursor.execute('INSERT INTO tareas (titulo, estado, usuario_id, fecha_limite) VALUES (%s, %s, %s, %s)', 
-                       (titulo, estado, usuario_id, fecha_limite))
-        mysql.connection.commit()
-        return redirect(url_for('tareas'))
 
+        cursor.execute('''
+            INSERT INTO tareas (titulo, estado, usuario_id, fecha_limite) 
+            VALUES (%s, %s, %s, %s)
+        ''', (titulo, estado, usuario_id, fecha_limite))
+        mysql.connection.commit()
+
+    # Mostrar tareas
     cursor.execute('SELECT * FROM tareas WHERE usuario_id = %s', (session['usuario_id'],))
     tareas_usuario = cursor.fetchall()
+    cursor.close()
+
     return render_template('tareas.html', usuario=session['usuario'], tareas=tareas_usuario)
+
 
 #Actualizar tarea#
 @app.route('/actualizar_tarea', methods=['POST'])
@@ -162,14 +203,16 @@ def actualizar_tarea():
             WHERE titulo = %s AND usuario_id = %s
         ''', (nueva_fecha, titulo, session['usuario_id']))
         mysql.connection.commit()
+        modificado = cursor.rowcount
         cursor.close()
 
-        if cursor.rowcount == 0:
+        if modificado == 0:
             return jsonify({'exito': False, 'error': 'Tarea no encontrada'})
 
         return jsonify({'exito': True})
     except Exception as e:
         return jsonify({'exito': False, 'error': str(e)})
+
 
 
 
@@ -180,19 +223,22 @@ def actualizar_tarea():
 
 def obtener_movimientos_mes_actual(usuario_id):
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    hoy = datetime.today()
-    primer_dia = hoy.replace(day=1).strftime('%Y-%m-%d')
-    ultimo_dia = hoy.strftime('%Y-%m-%d')
+    try:
+        hoy = datetime.today()
+        primer_dia = hoy.replace(day=1).strftime('%Y-%m-%d')
+        ultimo_dia = hoy.strftime('%Y-%m-%d')
 
-    cursor.execute("""
-        SELECT * FROM movimientos
-        WHERE usuario_id = %s AND fecha BETWEEN %s AND %s
-        ORDER BY fecha DESC
-    """, (usuario_id, primer_dia, ultimo_dia))
+        cursor.execute("""
+            SELECT * FROM movimientos
+            WHERE usuario_id = %s AND fecha BETWEEN %s AND %s
+            ORDER BY fecha DESC
+        """, (usuario_id, primer_dia, ultimo_dia))
 
-    movimientos = cursor.fetchall()
-    cursor.close()
-    return movimientos
+        movimientos = cursor.fetchall()
+        return movimientos
+    finally:
+        cursor.close()
+
 
 
 @app.route('/movimientos', methods=['GET', 'POST'])
@@ -229,49 +275,38 @@ def movimientos():
                     flash('El abono no puede ser mayor que el saldo pendiente')
                     return redirect(url_for('movimientos'))
 
-                # Insertar movimiento con deuda_id
                 cursor.execute("""
                     INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, deuda_id)
                     VALUES (%s, %s, %s, %s, %s, %s)
                 """, (fecha, descripcion, valor, tipo, usuario_id, deuda_id))
 
-                # Actualizar saldo en tabla deudas restando abono
                 nuevo_saldo = deuda['saldo'] - valor
                 cursor.execute("""
                     UPDATE deudas SET saldo = %s WHERE id = %s AND usuario_id = %s
                 """, (nuevo_saldo, deuda_id, usuario_id))
 
             elif tipo in ['deuda', 'a_recibir']:
-                # Insertar nueva deuda sin modificar saldo extra
                 cursor.execute("""
                     INSERT INTO deudas (descripcion, usuario_id, monto_inicial, saldo, tipo)
                     VALUES (%s, %s, %s, %s, %s)
                 """, (descripcion, usuario_id, valor, valor, tipo))
                 deuda_nueva_id = cursor.lastrowid
 
-                # Insertar movimiento asociado con deuda_id recién creado
                 cursor.execute("""
                     INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, deuda_id)
                     VALUES (%s, %s, %s, %s, %s, %s)
                 """, (fecha, descripcion, valor, tipo, usuario_id, deuda_nueva_id))
 
             else:
-                # Otros tipos, sin deuda_id
                 cursor.execute("""
                     INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, deuda_id)
                     VALUES (%s, %s, %s, %s, %s, NULL)
                 """, (fecha, descripcion, valor, tipo, usuario_id))
 
             mysql.connection.commit()
-
-            # Redirigir tras POST para evitar repost en refresh
             return redirect(url_for('movimientos'))
 
-        # --- Código GET para mostrar movimientos y datos ---
-
-                # --- Código GET para mostrar movimientos y datos ---
-
-        # Filtros desde URL
+        # GET - Mostrar movimientos
         primer_dia = datetime.today().replace(day=1).strftime('%Y-%m-%d')
         hoy = datetime.today().strftime('%Y-%m-%d')
 
@@ -280,7 +315,6 @@ def movimientos():
         ordenar = request.args.get('ordenar') or 'fecha_desc'
         seccion = request.args.get('seccion') or 'deudas'
 
-        # Ordenamiento dinámico
         ordenes = {
             'fecha_desc': 'fecha DESC',
             'fecha_asc': 'fecha ASC',
@@ -289,7 +323,6 @@ def movimientos():
         }
         orden_sql = ordenes.get(ordenar, 'fecha DESC')
 
-        # Consulta de movimientos filtrada
         cursor.execute(f"""
             SELECT * FROM movimientos
             WHERE usuario_id = %s AND fecha BETWEEN %s AND %s
@@ -297,7 +330,6 @@ def movimientos():
         """, (usuario_id, fecha_desde, fecha_hasta))
         movimientos_list = cursor.fetchall()
 
-        # Cargar deudas con saldo
         cursor.execute("""
             SELECT id, descripcion, saldo, tipo
             FROM deudas
@@ -305,7 +337,6 @@ def movimientos():
         """, (usuario_id,))
         deudas_pendientes = cursor.fetchall()
 
-        # Asociar saldo a movimientos si aplica
         for mov in movimientos_list:
             if mov['tipo'] in ['deuda', 'a_recibir']:
                 deuda_rel = next((d for d in deudas_pendientes if d['id'] == mov.get('deuda_id')), None)
@@ -313,7 +344,6 @@ def movimientos():
             else:
                 mov['saldo'] = None
 
-        # Calcular saldo actual general
         cursor.execute("""
             SELECT 
                 COALESCE(SUM(
@@ -337,9 +367,9 @@ def movimientos():
                                ordenar=ordenar,
                                seccion=seccion)
 
-
     finally:
         cursor.close()
+
 
 
 
@@ -351,26 +381,28 @@ def editar_movimiento(movimiento_id):
     usuario_id = session['usuario_id']
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
-    cursor.execute("SELECT * FROM movimientos WHERE id=%s AND usuario_id=%s", (movimiento_id, usuario_id))
-    mov_original = cursor.fetchone()
-    if not mov_original:
-        flash('Movimiento no encontrado o sin permiso para editar')
-        cursor.close()
+    try:
+        cursor.execute("SELECT * FROM movimientos WHERE id=%s AND usuario_id=%s", (movimiento_id, usuario_id))
+        mov_original = cursor.fetchone()
+        if not mov_original:
+            flash('Movimiento no encontrado o sin permiso para editar')
+            return redirect(url_for('movimientos'))
+
+        descripcion = request.form['descripcion']
+
+        cursor.execute("""
+            UPDATE movimientos
+            SET descripcion = %s
+            WHERE id = %s AND usuario_id = %s
+        """, (descripcion, movimiento_id, usuario_id))
+
+        mysql.connection.commit()
+        flash('Descripción actualizada correctamente.')
         return redirect(url_for('movimientos'))
 
-    descripcion = request.form['descripcion']
+    finally:
+        cursor.close()
 
-    cursor.execute("""
-        UPDATE movimientos
-        SET descripcion = %s
-        WHERE id = %s AND usuario_id = %s
-    """, (descripcion, movimiento_id, usuario_id))
-
-    mysql.connection.commit()
-    cursor.close()
-
-    flash('Descripción actualizada correctamente.')
-    return redirect(url_for('movimientos'))
 
 
 
