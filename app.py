@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, current_app
 from dotenv import load_dotenv
+from datetime import datetime
 from io import BytesIO
 from xhtml2pdf import pisa
 import base64
@@ -250,70 +251,32 @@ def movimientos():
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     try:
+        # Manejo de POST para ingresos/gastos (mantén igual)
         if request.method == 'POST':
             fecha = request.form['fecha']
             descripcion = request.form['descripcion']
             valor = Decimal(request.form['valor'])
             tipo = request.form['tipo']
-            deuda_id = request.form.get('deuda_id')
 
-            if tipo in ['abono_deuda', 'abono_a_recibir']:
-                if not deuda_id:
-                    flash('Debes seleccionar una deuda o dinero a recibir para abonar')
-                    return redirect(url_for('movimientos'))
+            if tipo not in ['ingreso', 'gasto']:
+                flash('Tipo de movimiento inválido para esta sección')
+                return redirect(url_for('movimientos'))
 
-                cursor.execute("""
-                    SELECT saldo, tipo FROM deudas
-                    WHERE id = %s AND usuario_id = %s
-                """, (deuda_id, usuario_id))
-                deuda = cursor.fetchone()
-                if not deuda:
-                    flash('Deuda o dinero a recibir no encontrado')
-                    return redirect(url_for('movimientos'))
-
-                if valor > deuda['saldo']:
-                    flash('El abono no puede ser mayor que el saldo pendiente')
-                    return redirect(url_for('movimientos'))
-
-                cursor.execute("""
-                    INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, deuda_id)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (fecha, descripcion, valor, tipo, usuario_id, deuda_id))
-
-                nuevo_saldo = deuda['saldo'] - valor
-                cursor.execute("""
-                    UPDATE deudas SET saldo = %s WHERE id = %s AND usuario_id = %s
-                """, (nuevo_saldo, deuda_id, usuario_id))
-
-            elif tipo in ['deuda', 'a_recibir']:
-                cursor.execute("""
-                    INSERT INTO deudas (descripcion, usuario_id, monto_inicial, saldo, tipo)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (descripcion, usuario_id, valor, valor, tipo))
-                deuda_nueva_id = cursor.lastrowid
-
-                cursor.execute("""
-                    INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, deuda_id)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (fecha, descripcion, valor, tipo, usuario_id, deuda_nueva_id))
-
-            else:
-                cursor.execute("""
-                    INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, deuda_id)
-                    VALUES (%s, %s, %s, %s, %s, NULL)
-                """, (fecha, descripcion, valor, tipo, usuario_id))
-
+            cursor.execute("""
+                INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, deuda_id)
+                VALUES (%s, %s, %s, %s, %s, NULL)
+            """, (fecha, descripcion, valor, tipo, usuario_id))
             mysql.connection.commit()
             return redirect(url_for('movimientos'))
 
-        # GET - Mostrar movimientos
+        # Filtros comunes
         primer_dia = datetime.today().replace(day=1).strftime('%Y-%m-%d')
         hoy = datetime.today().strftime('%Y-%m-%d')
 
         fecha_desde = request.args.get('fecha_desde') or primer_dia
         fecha_hasta = request.args.get('fecha_hasta') or hoy
         ordenar = request.args.get('ordenar') or 'fecha_desc'
-        seccion = request.args.get('seccion') or 'deudas'
+        seccion = request.args.get('seccion', 'movimientos')  # sección activa
 
         ordenes = {
             'fecha_desc': 'fecha DESC',
@@ -323,49 +286,64 @@ def movimientos():
         }
         orden_sql = ordenes.get(ordenar, 'fecha DESC')
 
+        # Datos base para ingresos/gastos
         cursor.execute(f"""
             SELECT * FROM movimientos
-            WHERE usuario_id = %s AND fecha BETWEEN %s AND %s
+            WHERE usuario_id = %s AND tipo IN ('ingreso', 'gasto')
+              AND fecha BETWEEN %s AND %s
             ORDER BY {orden_sql}
         """, (usuario_id, fecha_desde, fecha_hasta))
         movimientos_list = cursor.fetchall()
 
         cursor.execute("""
-            SELECT id, descripcion, saldo, tipo
-            FROM deudas
-            WHERE usuario_id = %s AND saldo > 0
-        """, (usuario_id,))
-        deudas_pendientes = cursor.fetchall()
-
-        for mov in movimientos_list:
-            if mov['tipo'] in ['deuda', 'a_recibir']:
-                deuda_rel = next((d for d in deudas_pendientes if d['id'] == mov.get('deuda_id')), None)
-                mov['saldo'] = deuda_rel['saldo'] if deuda_rel else 0.00
-            else:
-                mov['saldo'] = None
-
-        cursor.execute("""
-            SELECT 
-                COALESCE(SUM(
-                    CASE 
-                        WHEN tipo IN ('ingreso', 'deuda', 'abono_a_recibir') THEN valor
-                        WHEN tipo IN ('gasto', 'a_recibir', 'abono_deuda') THEN -valor
-                        ELSE 0
-                    END
-                ), 0) AS saldo
+            SELECT COALESCE(SUM(
+                CASE 
+                    WHEN tipo = 'ingreso' THEN valor
+                    WHEN tipo = 'gasto' THEN -valor
+                    ELSE 0
+                END
+            ), 0) AS saldo
             FROM movimientos
-            WHERE usuario_id = %s
+            WHERE usuario_id = %s AND tipo IN ('ingreso', 'gasto')
         """, (usuario_id,))
         saldo_actual = cursor.fetchone()['saldo']
 
+        cursor.execute("""
+            SELECT id, nombre, icono FROM categorias WHERE usuario_id = %s
+        """, (usuario_id,))
+        categorias = cursor.fetchall()
+
+        prestamos = []
+        if seccion == 'prestamos':
+            # Consulta préstamos con filtros y orden
+            ordenes_prestamos = {
+                'fecha_desc': 'fecha DESC',
+                'fecha_asc': 'fecha ASC',
+                'valor_desc': 'monto_inicial DESC',
+                'valor_asc': 'monto_inicial ASC',
+            }
+            orden_prestamo_sql = ordenes_prestamos.get(ordenar, 'fecha DESC')
+
+            cursor.execute(f"""
+                SELECT id, descripcion, persona, monto_inicial, saldo, fecha, frecuencia, estado 
+                FROM prestamos
+                WHERE usuario_id = %s
+                  AND fecha BETWEEN %s AND %s
+                ORDER BY {orden_prestamo_sql}
+            """, (usuario_id, fecha_desde, fecha_hasta))
+            prestamos = cursor.fetchall()
+
         return render_template('movimientos.html',
-                               movimientos=movimientos_list,
-                               deudas=deudas_pendientes,
-                               saldo_actual=saldo_actual,
-                               fecha_desde=fecha_desde,
-                               fecha_hasta=fecha_hasta,
-                               ordenar=ordenar,
-                               seccion=seccion)
+                       movimientos=movimientos_list,
+                       saldo_actual=saldo_actual,
+                       fecha_desde=fecha_desde,
+                       fecha_hasta=fecha_hasta,
+                       ordenar=ordenar,
+                       categorias=categorias,
+                       prestamos=prestamos,
+                       seccion=seccion,
+                       usuario=session.get('usuario'))  # 👈 agrega esto
+
 
     finally:
         cursor.close()
@@ -373,8 +351,10 @@ def movimientos():
 
 
 
-@app.route('/movimientos/editar/<int:movimiento_id>', methods=['POST'])
-def editar_movimiento(movimiento_id):
+
+
+@app.route('/prestamos/registrar', methods=['POST'])
+def registrar_prestamo():
     if 'logueado' not in session or 'usuario_id' not in session:
         return redirect(url_for('iniciar_sesion'))
 
@@ -382,28 +362,77 @@ def editar_movimiento(movimiento_id):
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     try:
-        cursor.execute("SELECT * FROM movimientos WHERE id=%s AND usuario_id=%s", (movimiento_id, usuario_id))
-        mov_original = cursor.fetchone()
-        if not mov_original:
-            flash('Movimiento no encontrado o sin permiso para editar')
-            return redirect(url_for('movimientos'))
-
+        fecha = request.form['fecha']
+        frecuencia = request.form['frecuencia']
+        persona = request.form['persona']
         descripcion = request.form['descripcion']
+        valor = Decimal(request.form['valor'])
+        estado = 'pendiente'
+        fecha_creacion = datetime.now()
 
         cursor.execute("""
-            UPDATE movimientos
-            SET descripcion = %s
-            WHERE id = %s AND usuario_id = %s
-        """, (descripcion, movimiento_id, usuario_id))
-
+            INSERT INTO prestamos (descripcion, persona, usuario_id, monto_inicial, saldo, fecha, frecuencia, estado, fecha_creacion)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (descripcion, persona, usuario_id, valor, valor, fecha, frecuencia, estado, fecha_creacion))
         mysql.connection.commit()
-        flash('Descripción actualizada correctamente.')
-        return redirect(url_for('movimientos'))
+
+    except Exception as e:
+        # Aquí puedes loguear el error si quieres, o manejarlo
+        pass
 
     finally:
         cursor.close()
 
+    # Recoger filtros actuales para mantenerlos al recargar
+    fecha_desde = request.args.get('fecha_desde', '')
+    fecha_hasta = request.args.get('fecha_hasta', '')
+    ordenar = request.args.get('ordenar', 'fecha_desc')
 
+    # Redirigir a movimientos con sección 'prestamos' y filtros
+    return redirect(url_for('movimientos', 
+                            seccion='prestamos', 
+                            fecha_desde=fecha_desde, 
+                            fecha_hasta=fecha_hasta, 
+                            ordenar=ordenar
+                            ))
+
+
+@app.route('/prestamos/abonar', methods=['POST'])
+def abonar_prestamo():
+    if 'logueado' not in session:
+        return redirect(url_for('iniciar_sesion'))
+
+    prestamo_id = request.form['prestamo_id']
+    monto_abono = Decimal(request.form['monto_abono'])
+
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    try:
+        # Obtener saldo actual
+        cursor.execute("SELECT saldo FROM prestamos WHERE id = %s AND usuario_id = %s", (prestamo_id, session['usuario_id']))
+        prestamo = cursor.fetchone()
+
+        if prestamo:
+            nuevo_saldo = prestamo['saldo'] - monto_abono
+            estado = 'pagado' if nuevo_saldo <= 0 else 'pendiente'
+
+            cursor.execute("""
+                UPDATE prestamos 
+                SET saldo = %s, estado = %s 
+                WHERE id = %s AND usuario_id = %s
+            """, (max(nuevo_saldo, 0), estado, prestamo_id, session['usuario_id']))
+            mysql.connection.commit()
+    finally:
+        cursor.close()
+
+    return redirect(url_for('movimientos'))
+
+
+
+@app.route('/deuda/registrar', methods=['GET', 'POST'])
+def registrar_deuda():
+    # código para registrar deuda
+    return render_template('registrar_deuda.html')
 
 
 

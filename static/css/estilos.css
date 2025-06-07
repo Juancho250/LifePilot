@@ -84,7 +84,6 @@ header {
     display: flex;
     align-items: center;        /* Centrar verticalmente */
     padding: 0 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     position: relative;
 }
 
@@ -130,14 +129,7 @@ header {
 /* --------------------------------------------- */
 /* MAIN, CONTENIDO PRINCIPAL Y LISTAS           */
 /* --------------------------------------------- */
-main {
-    max-width: 900px;
-    margin: 30px auto;
-    padding: 20px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-}
+
 
 ul {
     list-style: none;
@@ -438,6 +430,18 @@ footer {
   #calendar-container {
     margin-top: 40px;
   }
+
+
+
+
+
+
+
+
+
+
+
+
   /*estilos para las idesas*/
 
 .ideas-page {
@@ -516,6 +520,87 @@ footer {
 /* --------------------------------------------- */
 /* ESTILOS PAGINA movimientos                         */
 /* --------------------------------------------- */
+.contenedor {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 60px);
+  padding: 3vh;
+  gap: 3vh;
+  box-sizing: border-box;
+}
+
+/* Paneles por defecto */
+.panel-derecho,
+.panel-izquierdo {
+  background-color: #ffffff;
+  border-radius: 20px;
+  width: 50%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel-derecho{
+  width: 100%;
+}
+/* Responsivo para móviles */
+@media (max-width: 1125px) {
+  .contenedor {
+    flex-direction: column;
+    align-items: center;
+    height: auto; /* o 100% si prefieres */
+  }
+
+  .panel-derecho,
+  .panel-izquierdo {
+    width: 100% !important; /* Asegura que sobrescriba el 50% anterior */
+    padding: 16px;
+    margin: 0;
+  }
+}
+
+
+.panel-derecho input,
+.panel-derecho select,
+.panel-izquierdo input,
+.panel-izquierdo select {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  box-sizing: border-box;
+  transition: border 0.2s;
+}
+
+.panel-derecho input:focus,
+.panel-derecho select:focus,
+.panel-izquierdo input:focus,
+.panel-izquierdo select:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.panel-derecho button,
+.panel-izquierdo button {
+  padding: 12px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 12px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.panel-derecho button:hover,
+.panel-izquierdo button:hover {
+  background-color: #0056b3;
+}
 
 .titulo {
   text-align: center;
@@ -533,33 +618,7 @@ footer {
   margin-bottom: 30px;
 }
 
-.form-movimientos input,
-.form-movimientos select,
-.form-movimientos button,
-.filtros-form input,
-.filtros-form select {
-  font-size: 2vh;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  min-width: 160px;
-  box-sizing: border-box;
-}
 
-.form-movimientos button,
-.filtros-form button {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  transition: background-color 0.3s ease;
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 8px;
-}
-
-.form-movimientos button:hover,
-.filtros-form button:hover {
-  background-color: #0056b3;
-}
 
 .filtros-form label {
   display: flex;
@@ -574,6 +633,67 @@ footer {
   margin-top: 22px;
 }
 
+.descripcion-display {
+  font-size: 2em;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.hidden-input {
+  display: none;
+}
+
+
+#valor-display {
+  color: #c62828;
+  font-weight: bold;
+  font-size: 1.8em;
+}
+label {
+  font-size: 1.1rem; /* un poco más grande */
+  margin-bottom: 6px; /* espacio debajo del label */
+  margin-top: 16px; /* espacio debajo del label */
+  display: block; /* para que el margin-bottom funcione y label quede arriba del input */
+  color: #333;
+  font-weight: 600;
+}
+
+
+select,
+input[type="text"],
+input[type="date"],
+input[type="number"] {
+  width: 100%;
+  padding: 10px 5px;
+  font-size: 1rem;
+  border: none;
+  border-bottom: 2px solid #ccc;
+  background-color: transparent;
+  color: #333;
+  transition: border-color 0.3s;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-bottom: 2px solid #007bff;
+}
+
+input::placeholder,
+select::placeholder {
+  color: #aaa;
+  font-style: italic;
+}
+
+.guardar-btn {
+  background-color: #444;
+  color: white;
+  padding: 12px 30px;
+  border-radius: 10px;
+  font-size: 1.1em;
+  border: none;
+  cursor: pointer;
+}
 /* Tabla */
 .tabla-responsive {
   overflow-x: auto;
@@ -626,46 +746,83 @@ footer {
 }
 
 /* Colores por tipo */
+.estado-pagado,
 .tipo-ingreso {
   color: #27ae60;
   font-weight: 600;
 }
 
+.estado-pendiente,
 .tipo-gasto {
   color: #e74c3c;
   font-weight: 600;
 }
+.estado-vencido{
+  color: orange;
+}
 
-/* Modal */
+/* Modal: Fondo oscuro y centrado */
 .modal {
   display: none;
   position: fixed;
   z-index: 9999;
   left: 0;
   top: 0;
-  width: 100%; height: 100%;
-  background-color: rgba(0,0,0,0.4);
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(3px);
-  transition: opacity 0.3s ease;
-  pointer-events: none;
+  justify-content: center;
+  align-items: center;
 }
 
+/* Activar modal */
 .modal.show {
-  display: block;
-  opacity: 1;
-  pointer-events: auto;
+  display: flex;
 }
 
+/* Contenido del modal */
 .modal-contenido {
   background-color: #fff;
-  margin: 10% auto;
   padding: 20px 25px;
   border-radius: 12px;
-  max-width: 360px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-  animation: modalEntrada 0.3s forwards;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  animation: modalEntrada 0.3s ease-out;
   position: relative;
 }
+
+/* Animación */
+@keyframes modalEntrada {
+  from { transform: translateY(-30px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* Botones dentro del modal */
+.modal-contenido button {
+  margin-right: 10px;
+  margin-top: 10px;
+  padding: 8px 16px;
+  border: none;
+  background-color: #007BFF;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.modal-contenido button:hover {
+  background-color: #0056b3;
+}
+
+.modal-contenido input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  margin-top: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
 
 @keyframes modalEntrada {
   from { opacity: 0; transform: translateY(-30px); }
