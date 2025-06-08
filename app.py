@@ -1,17 +1,18 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, current_app
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from io import BytesIO
 from xhtml2pdf import pisa
-import base64
+from collections import defaultdict
+from decimal import Decimal
 from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import pymysql
+import base64
 import MySQLdb.cursors
-from datetime import datetime
-from collections import defaultdict
-from decimal import Decimal
+import MySQLdb
+
 
 import os
 
@@ -240,6 +241,17 @@ def obtener_movimientos_mes_actual(usuario_id):
     finally:
         cursor.close()
 
+# Función para formatear fechas en formato legible
+def formatear_fecha_humana(fecha_str):
+    hoy = date.today()
+    fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+
+    if fecha_obj == hoy:
+        return "Hoy"
+    elif fecha_obj == hoy - timedelta(days=1):
+        return "Ayer"
+    else:
+        return fecha_obj.strftime("%d/%m/%Y")
 
 
 @app.route('/movimientos', methods=['GET', 'POST'])
@@ -251,7 +263,7 @@ def movimientos():
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     try:
-        # Manejo de POST para ingresos/gastos (mantén igual)
+        # POST: Registrar ingresos/gastos
         if request.method == 'POST':
             fecha = request.form['fecha']
             descripcion = request.form['descripcion']
@@ -269,14 +281,34 @@ def movimientos():
             mysql.connection.commit()
             return redirect(url_for('movimientos'))
 
-        # Filtros comunes
-        primer_dia = datetime.today().replace(day=1).strftime('%Y-%m-%d')
-        hoy = datetime.today().strftime('%Y-%m-%d')
+        # Fechas base para filtros
+        hoy_date = datetime.today().date()
+        primer_dia = hoy_date.replace(day=1).strftime('%Y-%m-%d')
+        hoy_str = hoy_date.strftime('%Y-%m-%d')
 
-        fecha_desde = request.args.get('fecha_desde') or primer_dia
-        fecha_hasta = request.args.get('fecha_hasta') or hoy
-        ordenar = request.args.get('ordenar') or 'fecha_desc'
-        seccion = request.args.get('seccion', 'movimientos')  # sección activa
+        # Soporte para filtro por día específico
+        dia_param = request.args.get('dia', '').lower()
+        dias_disponibles = {
+            'hoy': hoy_date,
+            'ayer': hoy_date - timedelta(days=1),
+            'lunes': hoy_date - timedelta(days=hoy_date.weekday()),
+            'martes': hoy_date - timedelta(days=hoy_date.weekday() - 1),
+            'miércoles': hoy_date - timedelta(days=hoy_date.weekday() - 2),
+            'jueves': hoy_date - timedelta(days=hoy_date.weekday() - 3),
+            'viernes': hoy_date - timedelta(days=hoy_date.weekday() - 4),
+            'sábado': hoy_date - timedelta(days=hoy_date.weekday() - 5),
+            'domingo': hoy_date - timedelta(days=hoy_date.weekday() - 6),
+        }
+
+        if dia_param in dias_disponibles:
+            fecha_desde = fecha_hasta = dias_disponibles[dia_param].strftime('%Y-%m-%d')
+        else:
+            fecha_desde = request.args.get('fecha_desde') or primer_dia
+            fecha_hasta = request.args.get('fecha_hasta') or hoy_str
+
+        # Ordenamiento
+        ordenar = request.args.get('ordenar', 'fecha_desc')
+        seccion = request.args.get('seccion', 'movimientos')
 
         ordenes = {
             'fecha_desc': 'fecha DESC',
@@ -286,15 +318,24 @@ def movimientos():
         }
         orden_sql = ordenes.get(ordenar, 'fecha DESC')
 
-        # Datos base para ingresos/gastos
+        # Obtener movimientos filtrados
         cursor.execute(f"""
             SELECT * FROM movimientos
             WHERE usuario_id = %s AND tipo IN ('ingreso', 'gasto')
-              AND fecha BETWEEN %s AND %s
+              AND DATE(fecha) BETWEEN %s AND %s
             ORDER BY {orden_sql}
         """, (usuario_id, fecha_desde, fecha_hasta))
         movimientos_list = cursor.fetchall()
 
+        # Agrupar movimientos por fecha legible (Hoy, Ayer, o dd/mm/yyyy)
+        movimientos_agrupados = defaultdict(list)
+        for m in movimientos_list:
+            fecha_obj = m['fecha']
+            fecha_str = fecha_obj.strftime('%Y-%m-%d') if isinstance(fecha_obj, (datetime, date)) else m['fecha']
+            fecha_legible = formatear_fecha_humana(fecha_str)
+            movimientos_agrupados[fecha_legible].append(m)
+
+        # Calcular saldo total
         cursor.execute("""
             SELECT COALESCE(SUM(
                 CASE 
@@ -308,14 +349,15 @@ def movimientos():
         """, (usuario_id,))
         saldo_actual = cursor.fetchone()['saldo']
 
+        # Categorías del usuario
         cursor.execute("""
             SELECT id, nombre, icono FROM categorias WHERE usuario_id = %s
         """, (usuario_id,))
         categorias = cursor.fetchall()
 
+        # Sección préstamos (opcional)
         prestamos = []
         if seccion == 'prestamos':
-            # Consulta préstamos con filtros y orden
             ordenes_prestamos = {
                 'fecha_desc': 'fecha DESC',
                 'fecha_asc': 'fecha ASC',
@@ -328,28 +370,27 @@ def movimientos():
                 SELECT id, descripcion, persona, monto_inicial, saldo, fecha, frecuencia, estado 
                 FROM prestamos
                 WHERE usuario_id = %s
-                  AND fecha BETWEEN %s AND %s
+                  AND DATE(fecha) BETWEEN %s AND %s
                 ORDER BY {orden_prestamo_sql}
             """, (usuario_id, fecha_desde, fecha_hasta))
             prestamos = cursor.fetchall()
 
-        return render_template('movimientos.html',
-                       movimientos=movimientos_list,
-                       saldo_actual=saldo_actual,
-                       fecha_desde=fecha_desde,
-                       fecha_hasta=fecha_hasta,
-                       ordenar=ordenar,
-                       categorias=categorias,
-                       prestamos=prestamos,
-                       seccion=seccion,
-                       usuario=session.get('usuario'))  # 👈 agrega esto
-
+        return render_template(
+            'movimientos.html',
+            movimientos_agrupados=movimientos_agrupados,
+            saldo_actual=saldo_actual,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            ordenar=ordenar,
+            categorias=categorias,
+            prestamos=prestamos,
+            seccion=seccion,
+            dia_actual=dia_param,
+            usuario=session.get('usuario')
+        )
 
     finally:
         cursor.close()
-
-
-
 
 
 

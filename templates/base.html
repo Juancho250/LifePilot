@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ORYON - {% block titulo %}{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
     <link rel="shortcut icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/x-icon">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}" />
 </head>
 
@@ -77,39 +77,91 @@
         }
     </script>
 
-   <script>
-        // Mostrar u ocultar select de deuda según tipo en formulario principal
-        function toggleDeudaSelect() {
-            const tipo = document.getElementById('tipoSelect').value;
-            const deudaSelect = document.getElementById('deudaSelect');
+    <!-------------------------------------->
+    <!----------Modal abono-------------->
+    <!-------------------------------------->
+    <script>
+        // Seleccionamos el modal y los elementos del formulario
+        const modalAbono = document.getElementById('modalAbono');
+        const abonoPrestamoIdInput = document.getElementById('abonoPrestamoId');
+        const saldoPendienteSpan = document.getElementById('saldoPendienteModal');
 
-            if (tipo === 'abono_deuda' || tipo === 'abono_a_recibir') {
-            deudaSelect.style.display = 'inline-block';
-            deudaSelect.required = true;
-            } else {
-            deudaSelect.style.display = 'none';
-            deudaSelect.required = false;
-            deudaSelect.value = '';  // Limpiar selección si se oculta
-            }
+        // Función que abre el modal con los datos del préstamo
+        function abrirModalAbono(id, saldo) {
+            abonoPrestamoIdInput.value = id;
+            saldoPendienteSpan.textContent = parseFloat(saldo).toFixed(2);
+            modalAbono.classList.add('show');
         }
 
-        // Mostrar u ocultar select de deuda según tipo en modal editar
-        function toggleEditarDeudaSelect() {
-            const tipo = document.getElementById('editarTipo').value;
-            const deudaSelect = document.getElementById('editarDeudaSelect');
-
-            if (tipo === 'abono_deuda' || tipo === 'abono_a_recibir') {
-            deudaSelect.style.display = 'inline-block';
-            deudaSelect.required = true;
-            } else {
-            deudaSelect.style.display = 'none';
-            deudaSelect.required = false;
-            deudaSelect.value = ''; // Limpiar selección si se oculta
-            }
+        // Función para cerrar el modal
+        function cerrarModalAbono() {
+            modalAbono.classList.remove('show');
         }
+
+        // Cerrar al hacer clic fuera del contenido
+        window.addEventListener('click', function (e) {
+            if (e.target === modalAbono) {
+            cerrarModalAbono();
+            }
+        });
+
+        // Exponer funciones globalmente para que se puedan usar desde los botones
+        window.abrirModalAbono = abrirModalAbono;
+        window.cerrarModalAbono = cerrarModalAbono;
     </script>
 
-    
+
+    <!-------------------------------------->
+    <!----------Modal detalles-------------->
+    <!-------------------------------------->
+    <script>
+        document.querySelectorAll('.fila-modal-detalles').forEach(fila => {
+            fila.addEventListener('click', () => {
+            const modal = document.getElementById('modal-detalles');
+            const contenedor = document.getElementById('modal-detalles-contenido-info');
+
+            // Limpiar contenido anterior
+            contenedor.innerHTML = '';
+
+            // Recorremos los atributos data- para mostrar la info
+            for (const attr of fila.attributes) {
+                if (attr.name.startsWith('data-') && attr.value.trim() !== '') {
+                // Formatear label (data-monto_inicial -> Monto inicial)
+                let label = attr.name.replace('data-', '').replace(/_/g, ' ');
+                label = label.charAt(0).toUpperCase() + label.slice(1);
+
+                // Crear párrafo con label y valor
+                const p = document.createElement('p');
+                p.innerHTML = `<strong>${label}:</strong> ${attr.value}`;
+                contenedor.appendChild(p);
+                }
+            }
+
+            // Mostrar modal
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden', 'false');
+            });
+        });
+
+        function cerrarModalDetalles() {
+            const modal = document.getElementById('modal-detalles');
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        // Cerrar modal si clic fuera del contenido
+        window.addEventListener('click', e => {
+            const modal = document.getElementById('modal-detalles');
+            if (e.target === modal) cerrarModalDetalles();
+        });
+
+        // Cerrar modal con tecla ESC
+        window.addEventListener('keydown', e => {
+            if (e.key === "Escape") cerrarModalDetalles();
+        });
+    </script>
+
+
 
 
     <script>
@@ -148,35 +200,291 @@
 
     <script>
         function mostrarFormulario(tipo) {
-        // Oculta todos
-        document.getElementById("form-movimiento").style.display = "none";
-        document.getElementById("form-prestamo").style.display = "none";
-        document.getElementById("form-deuda").style.display = "none";
+            // Oculta todas los formularios
+            document.getElementById('form-movimiento').style.display = 'none';
+            document.getElementById('form-prestamo').style.display = 'none';
+            document.getElementById('form-deuda').style.display = 'none';
 
-        // Muestra el seleccionado
+            // Muestra solo el formulario seleccionado
+            if (tipo === 'ingreso' || tipo === 'gasto') {
+                document.getElementById('form-movimiento').style.display = 'block';
+                document.getElementById('tipo').value = tipo;
+            } else if (tipo === 'prestamo') {
+                document.getElementById('form-prestamo').style.display = 'block';
+            } else if (tipo === 'deuda') {
+                document.getElementById('form-deuda').style.display = 'block';
+            }
+
+            // Oculta las tarjetas
+            const tarjetas = document.querySelector('.tipo-selector.tarjetas');
+            if (tarjetas) tarjetas.style.display = 'none';
+            }
+
+            // Función para ocultar formularios y volver a mostrar las tarjetas
+            function ocultarFormulariosYMostrarTarjetas() {
+            document.getElementById('form-movimiento').style.display = 'none';
+            document.getElementById('form-prestamo').style.display = 'none';
+            document.getElementById('form-deuda').style.display = 'none';
+
+            const tarjetas = document.querySelector('.tipo-selector.tarjetas');
+            if (tarjetas) tarjetas.style.display = 'flex'; // o block, según tu estilo
+            }
+
+    </script>
+
+
+<script>
+  // Conversión de texto a número más robusta
+  function textoANumero(texto) {
+    texto = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // quitar tildes
+    texto = texto.replace(/pesos?/g, "").trim();
+
+    const palabras = {
+        'cero': 0, 'uno': 1, 'una': 1, 'dos': 2, 'tres': 3, 'cuatro': 4, 'cinco': 5,
+        'seis': 6, 'siete': 7, 'ocho': 8, 'nueve': 9, 'diez': 10,
+        'once': 11, 'doce': 12, 'trece': 13, 'catorce': 14, 'quince': 15,
+        'veinte': 20, 'treinta': 30, 'cuarenta': 40, 'cincuenta': 50,
+        'sesenta': 60, 'setenta': 70, 'ochenta': 80, 'noventa': 90,
+        'cien': 100, 'ciento': 100, 'doscientos': 200, 'trescientos': 300,
+        'cuatrocientos': 400, 'quinientos': 500, 'seiscientos': 600,
+        'setecientos': 700, 'ochocientos': 800, 'novecientos': 900,
+        'mil': 1000, 'millon': 1000000, 'millones': 1000000
+    };
+
+    const tokens = texto.split(/[\s-]+/);
+
+    let total = 0;
+    let parcial = 0;
+
+    for (let token of tokens) {
+        if (palabras[token] !== undefined) {
+        let valor = palabras[token];
+
+        if (valor === 100) {
+            // Si parcial es 0, asumimos "cien" solo = 100
+            parcial = (parcial === 0 ? 1 : parcial) * valor;
+        } else if (valor === 1000 || valor === 1000000) {
+            parcial = (parcial === 0 ? 1 : parcial) * valor;
+            total += parcial;
+            parcial = 0;
+        } else {
+            parcial += valor;
+        }
+        } else if (!isNaN(token)) {
+        // Si token es número directo, parseamos y sumamos directo a total
+        total += parseInt(token);
+        }
+    }
+
+    return total + parcial;
+    }
+
+    // Función para extraer número en dígitos (considera puntos o espacios como separadores)
+    function extraerNumero(texto) {
+    // Eliminar puntos y comas como separadores de miles
+    const limpio = texto.replace(/[.,]/g, '');
+    const match = limpio.match(/\d+/);
+    return match ? match[0] : null;
+    }
+
+
+
+  // Reconocimiento de voz
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const reconocimiento = SpeechRecognition ? new SpeechRecognition() : null;
+
+  if (reconocimiento) {
+    reconocimiento.lang = 'es-ES';
+    reconocimiento.continuous = false;
+
+    function iniciarReconocimientoVoz() {
+      reconocimiento.start();
+    }
+
+    reconocimiento.onresult = function(event) {
+      const texto = event.results[0][0].transcript;
+      document.getElementById('textoReconocido').value = texto;
+      procesarEntradaUsuario(texto);
+    };
+  } else {
+    console.warn("Tu navegador no soporta reconocimiento de voz.");
+  }
+
+  function procesarEntradaUsuario(texto) {
+    const hoy = new Date();
+    const ayer = new Date(hoy);
+    ayer.setDate(hoy.getDate() - 1);
+
+    texto = texto.toLowerCase();
+    let tipo = "";
+    let fecha = "";
+    let descripcion = "";
+    let valor = "";
+    let persona = "";
+
+    // --- Fecha ---
+    if (texto.includes("ayer")) {
+        fecha = ayer.toISOString().split("T")[0];
+    } else if (texto.includes("hoy")) {
+        fecha = hoy.toISOString().split("T")[0];
+    } else if (texto.match(/el (\d+|primero) de este mes/)) {
+        const diaMatch = texto.match(/el (\d+|primero) de este mes/)[1];
+        const dia = (diaMatch === "primero") ? 1 : parseInt(diaMatch);
+        const mes = hoy.getMonth() + 1;
+        const year = hoy.getFullYear();
+        fecha = `${year}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    } else {
+        fecha = hoy.toISOString().split("T")[0]; // por defecto
+    }
+
+    // --- Tipo y descripción ---
+    if (/(me pagaron|me llegó|recibí|me depositaron)/.test(texto)) {
+        tipo = "ingreso";
+        descripcion = "Ingreso recibido";
+    } else if (/(compré|gasté|pagué|invertí|adquirí)/.test(texto)) {
+        tipo = "gasto";
+        const partes = texto.split(/compré|gasté|pagué|invertí|adquirí/);
+        descripcion = partes[1]?.trim() || "Gasto";
+    } else if (/(presté|le presté|me pidió prestado|le di prestado|me prestó)/.test(texto)) {
+        tipo = "prestamo";
+
+        // Buscar nombre antes de "me prestó" o con "a" o "para"
+        let matchPersona = texto.match(/([a-záéíóúñ]+)\s+me prest[oó]/i);
+        if (!matchPersona) {
+        matchPersona = texto.match(/(?:a|para)\s+([a-záéíóúñ\s]+)/i);
+        }
+        persona = matchPersona ? matchPersona[1].trim() : "Sin nombre";
+
+        descripcion = "Préstamo";
+    } else if (/(tarjeta de crédito|debo|me endeudé|saqué fiado)/.test(texto)) {
+        tipo = "deuda";
+        descripcion = "Deuda generada";
+        const matchPersona = texto.match(/con\s+([a-záéíóúñ\s]+)/i);
+        persona = matchPersona ? matchPersona[1].trim() : "Tarjeta";
+    }
+
+    // --- Valor ---
+    // Limpiar signos $ y puntuación para detectar números correctamente
+    const textoLimpio = texto.replace(/[$.,]/g, '');
+    const matchNumero = textoLimpio.match(/\d{3,}/);
+
+    if (matchNumero) {
+        valor = Number(matchNumero[0]);
+    } else {
+        valor = textoANumero(texto);
+    }
+
+    // --- Mostrar formulario según tipo ---
+    if (tipo) mostrarFormulario(tipo);
+
+    // --- Llenar campos en formulario ---
+    setTimeout(() => {
         if (tipo === "ingreso" || tipo === "gasto") {
-            document.getElementById("form-movimiento").style.display = "block";
-            document.getElementById("tipo").value = tipo;
+        document.getElementById('tipo').value = tipo;
+        document.getElementById('fecha-mov').value = fecha;
+        document.getElementById('descripcion-mov').value = descripcion;
+        document.getElementById('valor-mov').value = valor;
         } else if (tipo === "prestamo") {
-            document.getElementById("form-prestamo").style.display = "block";
+        document.getElementById('fecha-prestamo').value = fecha;
+        document.getElementById('persona-prestamo').value = persona || "Sin nombre";
+        document.getElementById('descripcion-prestamo').value = descripcion;
+        document.getElementById('valor-prestamo').value = valor;
         } else if (tipo === "deuda") {
-            document.getElementById("form-deuda").style.display = "block";
+        document.getElementById('fecha-deuda').value = fecha;
+        document.getElementById('persona-deuda').value = persona || "Tarjeta";
+        document.getElementById('descripcion-deuda').value = descripcion;
+        document.getElementById('valor-deuda').value = valor;
         }
-        }
-    </script>
+    }, 500);
+    }
 
-     <!--Modal-->
-    <script>
-        function abrirModalAbono(prestamoId, saldoPendiente) {
-        document.getElementById('abonoPrestamoId').value = prestamoId;
-        document.getElementById('saldoPendienteModal').textContent = saldoPendiente.toFixed(2);
-        document.getElementById('modalAbono').classList.add('show');
-        }
 
-        function cerrarModalAbono() {
-        document.getElementById('modalAbono').classList.remove('show');
-        }
-    </script>
+  function mostrarFormulario(tipo) {
+    document.getElementById("form-movimiento").style.display = "none";
+    document.getElementById("form-prestamo").style.display = "none";
+    document.getElementById("form-deuda").style.display = "none";
+
+    if (tipo === "ingreso" || tipo === "gasto") {
+      document.getElementById("form-movimiento").style.display = "block";
+    } else if (tipo === "prestamo") {
+      document.getElementById("form-prestamo").style.display = "block";
+    } else if (tipo === "deuda") {
+      document.getElementById("form-deuda").style.display = "block";
+    }
+  }
+</script>
+
+<script>
+    const btnVoz = document.getElementById('btn-voz');
+const burbujaInput = document.getElementById('burbuja-input');
+const textoReconocido = document.getElementById('textoReconocido');
+
+let reconociendo = false;
+
+function toggleReconocimientoVoz() {
+  if (!reconociendo) {
+    iniciarReconocimientoVoz();
+  } else {
+    detenerReconocimientoVoz();
+  }
+}
+
+function iniciarReconocimientoVoz() {
+  if (!reconocimiento) {
+    alert('Reconocimiento de voz no soportado en este navegador.');
+    return;
+  }
+
+  reconocimiento.lang = 'es-ES';
+  reconocimiento.continuous = true; // Para reconocer mientras hablas
+  reconocimiento.interimResults = true; // Para obtener resultados parciales en tiempo real
+
+  reconocimiento.start();
+  reconociendo = true;
+  btnVoz.classList.add('hablando');
+  burbujaInput.classList.remove('oculto');
+  textoReconocido.value = "";
+}
+
+function detenerReconocimientoVoz() {
+  if (reconocimiento) {
+    reconocimiento.stop();
+  }
+  reconociendo = false;
+  btnVoz.classList.remove('hablando');
+  setTimeout(() => {
+    burbujaInput.classList.add('oculto');
+  }, 500);
+}
+
+if (reconocimiento) {
+  reconocimiento.onresult = (event) => {
+    let interimTranscript = '';
+    let finalTranscript = '';
+
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript;
+      } else {
+        interimTranscript += event.results[i][0].transcript;
+      }
+    }
+
+    textoReconocido.value = finalTranscript + interimTranscript;
+    procesarEntradaUsuario(textoReconocido.value);
+  };
+
+  reconocimiento.onend = () => {
+    if (reconociendo) {
+      // Si se terminó pero seguimos reconociendo, reiniciar para no cortar la escucha
+      reconocimiento.start();
+    } else {
+      detenerReconocimientoVoz();
+    }
+  };
+}
+
+</script>
 
 
 

@@ -11,11 +11,23 @@
         <h3>Saldo Actual: <strong>${{ "{:,.2f}".format(saldo_actual) }}</strong></h3>
         <h3 class="titulo">¿Qué deseas registrar hoy {{ usuario }}?</h3>
 
-        <div class="tipo-selector">
-          <button onclick="mostrarFormulario('ingreso')">Ingreso</button>
-          <button onclick="mostrarFormulario('gasto')">Gasto</button>
-          <button onclick="mostrarFormulario('prestamo')">Préstamo (a alguien)</button>
-          <button onclick="mostrarFormulario('deuda')">Deuda (lo que debo)</button>
+        <div class="tipo-selector tarjetas">
+          <button onclick="mostrarFormulario('ingreso')" class="tarjeta-btn">
+            <i class="fas fa-wallet icono-grande"></i>
+            <span>Ingreso</span>
+          </button>
+          <button onclick="mostrarFormulario('gasto')" class="tarjeta-btn">
+            <i class="fas fa-shopping-cart icono-grande"></i>
+            <span>Gasto</span>
+          </button>
+          <button onclick="mostrarFormulario('prestamo')" class="tarjeta-btn">
+            <i class="fas fa-hand-holding-usd icono-grande"></i>
+            <span>Préstamo</span>
+          </button>
+          <button onclick="mostrarFormulario('deuda')" class="tarjeta-btn">
+            <i class="fas fa-credit-card icono-grande"></i>
+            <span>Deuda</span>
+          </button>
         </div>
 
         <!-- Ingreso/Gasto -->
@@ -23,7 +35,7 @@
           <input type="hidden" name="tipo" id="tipo">
 
           <label> Fecha</label>
-          <input type="date" name="fecha" required>
+          <input type="date" name="fecha" required id="fecha-mov">
 
           <label>Frecuencia</label>
           <select name="frecuencia">
@@ -34,13 +46,13 @@
           </select>
 
           <label>Descripción</label>
-          <input type="text" name="descripcion" placeholder="Ej: Pago de salario, almuerzo..." required>
+          <input type="text" name="descripcion" placeholder="Ej: Pago de salario, almuerzo..." required id="descripcion-mov">
 
           <label>Monto</label>
-          <input type="number" name="valor" step="0.01" placeholder="Ej: 25000" required>
+          <input type="number" name="valor" step="0.01" placeholder="Ej: 25000" required id="valor-mov">
 
           <label>Categoría</label>
-            <select name="categoria_id" required>
+            <select name="categoria_id" required id="categoria-mov">
               {% for categoria in categorias %}
                 <option value="{{ categoria.id }}">
                   <i class="{{ categoria.icono }}"></i> {{ categoria.nombre }}
@@ -52,9 +64,9 @@
         </form>
 
         <!--Prestamos-->
-       <form method="POST" action="{{ url_for('registrar_prestamo') }}" id="form-prestamo" style="display: none;">
+        <form method="POST" action="{{ url_for('registrar_prestamo') }}" id="form-prestamo" style="display: none;">
           <label>Fecha</label>
-          <input type="date" name="fecha" required>
+          <input type="date" name="fecha" required id="fecha-prestamo">
 
           <label>Frecuencia</label>
           <select name="frecuencia" required>
@@ -65,13 +77,13 @@
           </select>
 
           <label>Persona</label>
-          <input type="text" name="persona" placeholder="¿A quién le prestaste?" required>
+          <input type="text" name="persona" placeholder="¿A quién le prestaste?" required id="persona-prestamo">
 
           <label>Descripción</label>
-          <input type="text" name="descripcion" placeholder="Ej: Préstamo a Juan" required>
+          <input type="text" name="descripcion" placeholder="Ej: Préstamo a Juan" required id="descripcion-prestamo">
 
           <label>Monto</label>
-          <input type="number" name="valor" step="0.01" placeholder="Ej: 25000" required>
+          <input type="number" name="valor" step="0.01" placeholder="Ej: 25000" required id="valor-prestamo">
 
           <button type="submit" class="guardar-btn">✓ Guardar</button>
         </form>
@@ -79,7 +91,7 @@
         <!-- Deuda -->
         <form method="POST" action="{{ url_for('registrar_deuda') }}" id="form-deuda" style="display: none;">
           <label>Fecha</label>
-          <input type="date" name="fecha" required>
+          <input type="date" name="fecha" required id="fecha-deuda">
 
           <label>Frecuencia</label>
           <select name="frecuencia">
@@ -90,18 +102,31 @@
           </select>
 
           <label>A quién le debes</label>
-          <input type="text" name="persona" placeholder="Ej: Deuda con Banco X" required>
+          <input type="text" name="persona" placeholder="Ej: Deuda con Banco X" required id="persona-deuda">
 
           <label>Descripción</label>
-          <input type="text" name="descripcion" placeholder="Ej: Préstamo del banco" required>
+          <input type="text" name="descripcion" placeholder="Ej: Préstamo del banco" required id="descripcion-deuda">
 
           <label>Monto</label>
-          <input type="number" name="valor" step="0.01" placeholder="Ej: 50000" required>
+          <input type="number" name="valor" step="0.01" placeholder="Ej: 50000" required id="valor-deuda">
 
           <button type="submit" class="guardar-btn">✓ Guardar</button>
         </form>
+
+        <!-- Botón de entrada por voz -->
+        <div class="voz-entrada-container">
+          <button id="btn-voz" class="btn-voz" onclick="toggleReconocimientoVoz()">
+            🎙️
+            <span class="ondas"></span>
+          </button>
+          <div id="burbuja-input" class="burbuja-input oculto">
+            <input type="text" id="textoReconocido" placeholder="Habla ahora..." readonly>
+          </div>
+        </div>
+        
       </div>
     </div>
+
 
 
 
@@ -149,26 +174,47 @@
       <div id="seccionIngresos" class="seccion {% if seccion == 'ingresos' %}activa{% endif %}">
         <div class="tabla-responsive">
           <table class="tabla-movimientos">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Descripción</th>
-                <th>Valor</th>
-                <th>Tipo</th>
-              </tr>
-            </thead>
             <tbody>
-              {% for item in movimientos if item.tipo in ['ingreso', 'gasto'] %}
+              {% set contador = 0 %}
+              {% for fecha_legible, items in movimientos_agrupados.items() %}
+                {% if not mostrar_todo and contador >= 1 %}
+                  <tr>
+                    <td colspan="3" style="text-align:center;">
+                      <a href="{{ url_for('movimientos', ver_todo=1) }}">Ver más movimientos</a>
+                    </td>
+                  </tr>
+                  {# Aquí no usamos break, simplemente omitimos mostrar más filas #}
+                {% else %}
+                  <tr>
+                    <td colspan="3"><strong>{{ fecha_legible }}</strong></td>
+                  </tr>
+                  {% for item in items %}
+                    <tr class="fila-modal-detalles"
+                        data-fecha="{{ item.fecha }}"
+                        data-tipo="{{ item.tipo }}"
+                        data-estado="{{ item.estado if item.estado else 'desconocido' }}"
+                        data-valor="{{ '%.2f'|format(item.valor) }}"
+                        data-descripcion="{{ item.descripcion }}">
+                      <td>{{ item.fecha }}</td>
+                      <td class="{% if item.tipo == 'ingreso' %}tipo-ingreso{% else %}tipo-gasto{% endif %}">
+                        {{ item.tipo|capitalize }}
+                      </td>
+                      <td>${{ '%.2f'|format(item.valor) }}</td>
+                    </tr>
+                  {% endfor %}
+                  {% set contador = contador + 1 %}
+                {% endif %}
+              {% endfor %}
+              {# Si no mostrás todo y hay más de un grupo, el link aparecerá después del primer grupo #}
+              {% if not mostrar_todo and movimientos_agrupados|length > 1 %}
                 <tr>
-                  <td>{{ item.fecha }}</td>
-                  <td>{{ item.descripcion }}</td>
-                  <td>${{ "%.2f"|format(item.valor) }}</td>
-                  <td class="{% if item.tipo == 'ingreso' %}tipo-ingreso{% elif item.tipo == 'gasto' %}tipo-gasto{% endif %}">
-                    {{ item.tipo|capitalize }}
+                  <td colspan="3" style="text-align:center;">
+                    <a href="{{ url_for('movimientos', ver_todo=1) }}">Ver más movimientos</a>
                   </td>
                 </tr>
-              {% endfor %}
+              {% endif %}
             </tbody>
+
           </table>
         </div>
       </div>
@@ -188,12 +234,18 @@
             </thead>
             <tbody>
               {% for item in deudas if item.tipo in ['deuda', 'abono_deuda'] %}
-                <tr>
+                <tr class="fila-modal-detalles"
+                    data-fecha="{{ item.fecha }}"
+                    data-descripcion="{{ item.descripcion }}"
+                    data-valor="{{ '%.2f'|format(item.monto_inicial if item.monto_inicial is defined else 0) }}"
+                    data-tipo="{{ item.tipo }}"
+                    data-saldo="{{ '%.2f'|format(item.saldo if item.saldo is defined else 0) }}"
+                    data-estado="{{ item.estado if item.estado else 'desconocido' }}">
                   <td>{{ item.fecha }}</td>
                   <td>{{ item.descripcion }}</td>
                   <td>
-                    {% if item.saldo is not none %}
-                      ${{ "%.2f"|format(item.saldo) }}
+                    {% if item.monto_inicial is defined %}
+                      ${{ "%.2f"|format(item.monto_inicial) }}
                     {% else %}
                       -
                     {% endif %}
@@ -223,35 +275,36 @@
               <tr>
                 <th>Fecha</th>
                 <th>Descripción</th>
-                <th>saldo</th>
+                <th>Monto Inicial</th>
                 <th>Estado</th>
                 <th>Saldo Pendiente</th>
-                <th>Accion</th>
+                <th>Acción</th>
               </tr>
             </thead>
             <tbody>
               {% for prestamo in prestamos %}
-                <tr>
+                <tr class="fila-modal-detalles"
+                    data-id="{{ prestamo.id }}"
+                    data-fecha="{{ prestamo.fecha }}"
+                    data-descripcion="{{ prestamo.descripcion }}"
+                    data-monto_inicial="{{ '%.2f'|format(prestamo.monto_inicial) }}"
+                    data-estado="{{ prestamo.estado }}"
+                    data-saldo="{{ '%.2f'|format(prestamo.saldo) }}">
                   <td>{{ prestamo.fecha }}</td>
                   <td>{{ prestamo.descripcion }}</td>
-                  <td>${{ "%.2f"|format(prestamo.monto_inicial) }}</td>
+                  <td>${{ '%.2f'|format(prestamo.monto_inicial) }}</td>
                   <td class="
-                    {% if prestamo.estado == 'pendiente' %}
-                      estado-pendiente
-                    {% elif prestamo.estado == 'pagado' %}
-                      estado-pagado
-                    {% elif prestamo.estado == 'vencido' %}
-                      estado-vencido
-                    {% else %}
-                      estado-otro
-                    {% endif %}
+                    {% if prestamo.estado == 'pendiente' %}estado-pendiente
+                    {% elif prestamo.estado == 'pagado' %}estado-pagado
+                    {% elif prestamo.estado == 'vencido' %}estado-vencido
+                    {% else %}estado-otro{% endif %}
                   ">
                     {{ prestamo.estado|capitalize }}
                   </td>
-                  <td>${{ "%.2f"|format(prestamo.saldo) }}</td>
+                  <td>${{ '%.2f'|format(prestamo.saldo) }}</td>
                   <td>
                     {% if prestamo.saldo > 0 %}
-                      <button type="button" onclick="abrirModalAbono({{ prestamo.id }}, {{ prestamo.saldo }})">Abonar</button>
+                      <button type="button" onclick="event.stopPropagation(); abrirModalAbono({{ prestamo.id }}, {{ prestamo.saldo }})">Abonar</button>
                     {% endif %}
                   </td>
                 </tr>
@@ -260,6 +313,7 @@
           </table>
         </div>
       </div>
+
 
     </div>
   </main>
@@ -281,6 +335,18 @@
     </form>
   </div>
 </div>
+
+<div id="modal-detalles" class="modal-detalles" aria-hidden="true" role="dialog" aria-labelledby="modal-detalles-titulo">
+  <div class="modal-detalles-contenido">
+    <button class="modal-detalles-cerrar" aria-label="Cerrar modal" onclick="cerrarModalDetalles()">&times;</button>
+    <h2 id="modal-detalles-titulo">Detalles</h2>
+    <div id="modal-detalles-contenido-info">
+      <!-- Aquí se llenan los datos dinámicamente -->
+    </div>
+  </div>
+</div>
+
+
 
 
 
