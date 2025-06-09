@@ -254,6 +254,8 @@ def formatear_fecha_humana(fecha_str):
         return fecha_obj.strftime("%d/%m/%Y")
 
 
+
+
 @app.route('/movimientos', methods=['GET', 'POST'])
 def movimientos():
     if 'logueado' not in session or 'usuario_id' not in session:
@@ -263,30 +265,34 @@ def movimientos():
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     try:
-        # POST: Registrar ingresos/gastos
+        # --------------------------------------------------------------------
+        # POST: Registrar ingreso o gasto
+        # --------------------------------------------------------------------
         if request.method == 'POST':
             fecha = request.form['fecha']
             descripcion = request.form['descripcion']
             valor = Decimal(request.form['valor'])
             tipo = request.form['tipo']
+            categoria_id = request.form.get('categoria_id') or None
 
             if tipo not in ['ingreso', 'gasto']:
                 flash('Tipo de movimiento inválido para esta sección')
                 return redirect(url_for('movimientos'))
 
             cursor.execute("""
-                INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, deuda_id)
-                VALUES (%s, %s, %s, %s, %s, NULL)
-            """, (fecha, descripcion, valor, tipo, usuario_id))
+                INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, categoria_id, deuda_id)
+                VALUES (%s, %s, %s, %s, %s, %s, NULL)
+            """, (fecha, descripcion, valor, tipo, usuario_id, categoria_id))
             mysql.connection.commit()
             return redirect(url_for('movimientos'))
 
-        # Fechas base para filtros
+        # --------------------------------------------------------------------
+        # Filtros de fecha
+        # --------------------------------------------------------------------
         hoy_date = datetime.today().date()
         primer_dia = hoy_date.replace(day=1).strftime('%Y-%m-%d')
         hoy_str = hoy_date.strftime('%Y-%m-%d')
 
-        # Soporte para filtro por día específico
         dia_param = request.args.get('dia', '').lower()
         dias_disponibles = {
             'hoy': hoy_date,
@@ -306,28 +312,36 @@ def movimientos():
             fecha_desde = request.args.get('fecha_desde') or primer_dia
             fecha_hasta = request.args.get('fecha_hasta') or hoy_str
 
+        # --------------------------------------------------------------------
         # Ordenamiento
+        # --------------------------------------------------------------------
         ordenar = request.args.get('ordenar', 'fecha_desc')
         seccion = request.args.get('seccion', 'movimientos')
 
         ordenes = {
-            'fecha_desc': 'fecha DESC',
-            'fecha_asc': 'fecha ASC',
-            'valor_desc': 'valor DESC',
-            'valor_asc': 'valor ASC',
+            'fecha_desc': 'm.fecha DESC',
+            'fecha_asc': 'm.fecha ASC',
+            'valor_desc': 'm.valor DESC',
+            'valor_asc': 'm.valor ASC',
         }
-        orden_sql = ordenes.get(ordenar, 'fecha DESC')
+        orden_sql = ordenes.get(ordenar, 'm.fecha DESC')
 
-        # Obtener movimientos filtrados
+        # --------------------------------------------------------------------
+        # Consultar movimientos con categoría
+        # --------------------------------------------------------------------
         cursor.execute(f"""
-            SELECT * FROM movimientos
-            WHERE usuario_id = %s AND tipo IN ('ingreso', 'gasto')
-              AND DATE(fecha) BETWEEN %s AND %s
+            SELECT m.*, c.nombre AS categoria_nombre, c.icono AS categoria_icono
+            FROM movimientos m
+            LEFT JOIN categorias c ON m.categoria_id = c.id
+            WHERE m.usuario_id = %s AND m.tipo IN ('ingreso', 'gasto')
+              AND DATE(m.fecha) BETWEEN %s AND %s
             ORDER BY {orden_sql}
         """, (usuario_id, fecha_desde, fecha_hasta))
         movimientos_list = cursor.fetchall()
 
-        # Agrupar movimientos por fecha legible (Hoy, Ayer, o dd/mm/yyyy)
+        # --------------------------------------------------------------------
+        # Agrupar por fecha legible
+        # --------------------------------------------------------------------
         movimientos_agrupados = defaultdict(list)
         for m in movimientos_list:
             fecha_obj = m['fecha']
@@ -335,7 +349,9 @@ def movimientos():
             fecha_legible = formatear_fecha_humana(fecha_str)
             movimientos_agrupados[fecha_legible].append(m)
 
-        # Calcular saldo total
+        # --------------------------------------------------------------------
+        # Calcular saldo
+        # --------------------------------------------------------------------
         cursor.execute("""
             SELECT COALESCE(SUM(
                 CASE 
@@ -349,13 +365,15 @@ def movimientos():
         """, (usuario_id,))
         saldo_actual = cursor.fetchone()['saldo']
 
-        # Categorías del usuario
-        cursor.execute("""
-            SELECT id, nombre, icono FROM categorias WHERE usuario_id = %s
-        """, (usuario_id,))
+        # --------------------------------------------------------------------
+        # Cargar categorías del usuario
+        # --------------------------------------------------------------------
+        cursor.execute("SELECT id, nombre, icono FROM categorias WHERE usuario_id = %s", (usuario_id,))
         categorias = cursor.fetchall()
 
-        # Sección préstamos (opcional)
+        # --------------------------------------------------------------------
+        # Consultar préstamos (si aplica)
+        # --------------------------------------------------------------------
         prestamos = []
         if seccion == 'prestamos':
             ordenes_prestamos = {
@@ -391,6 +409,33 @@ def movimientos():
 
     finally:
         cursor.close()
+
+
+
+
+
+@app.route('/crear_categoria', methods=['POST'])
+def crear_categoria():
+    nombre = request.form.get('nombre')
+    icono = request.form.get('icono')
+    usuario_id = session.get('usuario_id')
+
+    if not nombre or not icono or not usuario_id:
+        return jsonify(success=False, message="Datos incompletos")
+
+    cursor = mysql.connection.cursor()
+    cursor.execute("INSERT INTO categorias (nombre, icono, usuario_id) VALUES (%s, %s, %s)", 
+                   (nombre, icono, usuario_id))
+    mysql.connection.commit()
+    categoria_id = cursor.lastrowid
+    cursor.close()
+
+    return jsonify(success=True, message="Categoría creada correctamente", categoria={
+        "id": categoria_id,
+        "nombre": nombre,
+        "icono": icono
+    })
+
 
 
 

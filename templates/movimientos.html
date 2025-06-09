@@ -31,37 +31,54 @@
         </div>
 
         <!-- Ingreso/Gasto -->
-        <form method="POST" action="{{ url_for('movimientos') }}" id="form-movimiento" style="display: none;">
-          <input type="hidden" name="tipo" id="tipo">
+<form method="POST" action="{{ url_for('movimientos') }}" id="form-movimiento" style="display: none;">
+  <input type="hidden" name="tipo" id="tipo">
 
-          <label> Fecha</label>
-          <input type="date" name="fecha" required id="fecha-mov">
+  <label>Fecha</label>
+  <input type="date" name="fecha" required id="fecha-mov">
 
-          <label>Frecuencia</label>
-          <select name="frecuencia">
-            <option value="una_vez">Una vez</option>
-            <option value="diario">Diario</option>
-            <option value="semanal">Semanal</option>
-            <option value="mensual">Mensual</option>
-          </select>
+  <label>Frecuencia</label>
+  <select name="frecuencia">
+    <option value="una_vez">Una vez</option>
+    <option value="diario">Diario</option>
+    <option value="semanal">Semanal</option>
+    <option value="mensual">Mensual</option>
+  </select>
 
-          <label>Descripción</label>
-          <input type="text" name="descripcion" placeholder="Ej: Pago de salario, almuerzo..." required id="descripcion-mov">
+  <label>Descripción</label>
+  <input type="text" name="descripcion" placeholder="Ej: Pago de salario, almuerzo..." required id="descripcion-mov">
 
-          <label>Monto</label>
-          <input type="number" name="valor" step="0.01" placeholder="Ej: 25000" required id="valor-mov">
+  <label>Monto</label>
+  <input type="number" name="valor" step="0.01" placeholder="Ej: 25000" required id="valor-mov">
 
-          <label>Categoría</label>
-            <select name="categoria_id" required id="categoria-mov">
-              {% for categoria in categorias %}
-                <option value="{{ categoria.id }}">
-                  <i class="{{ categoria.icono }}"></i> {{ categoria.nombre }}
-                </option>
-              {% endfor %}
-            </select>
+  <label>Categoría</label>
+  <!-- Mostrar categorías -->
+  <div class="categorias-grid">
+    {% for categoria in categorias %}
+      <input
+        type="radio"
+        name="categoria_id"
+        value="{{ categoria.id }}"
+        id="cat{{ categoria.id }}"
+        class="categoria-radio"
+        required
+      >
+      <label for="cat{{ categoria.id }}" class="categoria-tarjeta">
+        <i class="fa-solid {{ categoria.icono }}"></i><br>
+        {{ categoria.nombre }}
+      </label>
+    {% endfor %}
 
-          <button type="submit" class="guardar-btn">✓ Guardar</button>
-        </form>
+    <!-- Tarjeta para agregar nueva categoría -->
+    <div class="categoria-tarjeta agregar-categoria" onclick="abrirModalCategoria()">
+      <i class="fas fa-plus"></i><br>
+      Agregar categoría
+    </div>
+  </div>
+
+  <button type="submit" class="guardar-btn">✓ Guardar</button>
+</form>
+
 
         <!--Prestamos-->
         <form method="POST" action="{{ url_for('registrar_prestamo') }}" id="form-prestamo" style="display: none;">
@@ -126,9 +143,6 @@
         
       </div>
     </div>
-
-
-
 
 
 
@@ -320,33 +334,54 @@
 
 
 
-<div id="modalAbono" class="modal">
-  <div class="modal-contenido">
-    <form method="POST" action="{{ url_for('abonar_prestamo') }}">
-      <input type="hidden" name="prestamo_id" id="abonoPrestamoId">
-      
-      <label>Monto a abonar:</label>
-      <input type="number" step="0.01" name="monto_abono" required>
+  <div id="modalAbono" class="modal">
+    <div class="modal-contenido">
+      <form method="POST" action="{{ url_for('abonar_prestamo') }}">
+        <input type="hidden" name="prestamo_id" id="abonoPrestamoId">
+        
+        <label>Monto a abonar:</label>
+        <input type="number" step="0.01" name="monto_abono" required>
 
-      <p>Saldo pendiente: $<span id="saldoPendienteModal"></span></p>
+        <p>Saldo pendiente: $<span id="saldoPendienteModal"></span></p>
 
-      <button type="submit">Confirmar abono</button>
-      <button type="button" onclick="cerrarModalAbono()">Cancelar</button>
-    </form>
-  </div>
-</div>
-
-<div id="modal-detalles" class="modal-detalles" aria-hidden="true" role="dialog" aria-labelledby="modal-detalles-titulo">
-  <div class="modal-detalles-contenido">
-    <button class="modal-detalles-cerrar" aria-label="Cerrar modal" onclick="cerrarModalDetalles()">&times;</button>
-    <h2 id="modal-detalles-titulo">Detalles</h2>
-    <div id="modal-detalles-contenido-info">
-      <!-- Aquí se llenan los datos dinámicamente -->
+        <button type="submit">Confirmar abono</button>
+        <button type="button" onclick="cerrarModalAbono()">Cancelar</button>
+      </form>
     </div>
   </div>
-</div>
 
+  <div id="modal-detalles" class="modal-detalles" aria-hidden="true" role="dialog" aria-labelledby="modal-detalles-titulo">
+    <div class="modal-detalles-contenido">
+      <button class="modal-detalles-cerrar" aria-label="Cerrar modal" onclick="cerrarModalDetalles()">&times;</button>
+      <h2 id="modal-detalles-titulo">Detalles</h2>
+      <div id="modal-detalles-contenido-info">
+        <!-- Aquí se llenan los datos dinámicamente -->
+      </div>
+    </div>
+  </div>
 
+  <!-- Modal personalizado para crear categoría -->
+  <div id="modalCategoria" class="modal-categoria">
+    <div class="modal-categoria-contenido">
+      <!-- Botón X -->
+      <span class="cerrar-modal" onclick="cerrarModalCategoria()">&times;</span>
+
+      <h3>Crear nueva categoría</h3>
+      <form id="formCrearCategoria" method="POST" action="{{ url_for('crear_categoria') }}">
+
+        <label>Nombre:</label>
+        <input type="text" id="nombreCategoria" name="nombre" required oninput="sugerirIconos()">
+
+        <label>Ícono:</label>
+        <div id="iconoSelector" class="icono-selector"></div>
+        <input type="hidden" name="icono" id="iconoInput" required>
+
+        <div style="margin-top: 15px;">
+          <button type="submit" class="guardar-btn">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
 
 

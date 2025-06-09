@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ORYON - {% block titulo %}{% endblock %}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="shortcut icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/x-icon">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}" />
 </head>
@@ -160,6 +160,176 @@
             if (e.key === "Escape") cerrarModalDetalles();
         });
     </script>
+
+
+    <!-------------------------------------->
+    <!----------Modal categorias-------------->
+    <!-------------------------------------->
+    <script>
+        const iconos = [
+            { nombre: 'comida', icono: 'fa-utensils', alias: ['alimentación', 'alimentos', 'restaurante'] },
+            { nombre: 'salario', icono: 'fa-money-bill-wave', alias: ['sueldo', 'ingreso', 'pago'] },
+            { nombre: 'transporte', icono: 'fa-bus', alias: ['bus', 'movilidad', 'viaje urbano'] },
+            { nombre: 'educacion', icono: 'fa-book', alias: ['estudios', 'escuela', 'universidad'] },
+            { nombre: 'hogar', icono: 'fa-home', alias: ['casa', 'vivienda', 'departamento'] },
+            { nombre: 'salud', icono: 'fa-heartbeat', alias: ['medico', 'hospital', 'doctor', 'medicina'] },
+            { nombre: 'ropa', icono: 'fa-tshirt', alias: ['vestimenta', 'camisa', 'ropa nueva'] },
+            { nombre: 'regalo', icono: 'fa-gift', alias: ['cumpleaños', 'presentes', 'obsequio'] },
+            { nombre: 'viaje', icono: 'fa-plane', alias: ['vacaciones', 'turismo', 'vuelo'] },
+            { nombre: 'entretenimiento', icono: 'fa-film', alias: ['cine', 'películas', 'series'] },
+            { nombre: 'mascota', icono: 'fa-dog', alias: ['perro', 'gato', 'animal', 'veterinario'] },
+            { nombre: 'internet', icono: 'fa-wifi', alias: ['wifi', 'red', 'datos'] },
+            { nombre: 'telefono', icono: 'fa-phone', alias: ['llamada', 'movil', 'celular'] },
+            { nombre: 'electricidad', icono: 'fa-bolt', alias: ['luz', 'corriente', 'factura'] },
+            { nombre: 'agua', icono: 'fa-tint', alias: ['servicio de agua', 'factura agua'] },
+            { nombre: 'ahorro', icono: 'fa-piggy-bank', alias: ['guardar', 'fondo', 'reserva'] },
+            { nombre: 'deporte', icono: 'fa-futbol', alias: ['ejercicio', 'actividad física', 'gimnasio'] },
+            { nombre: 'banco', icono: 'fa-university', alias: ['cuenta', 'finanzas', 'entidad financiera'] },
+            { nombre: 'tarjeta', icono: 'fa-credit-card', alias: ['crédito', 'pago', 'visa', 'mastercard'] },
+            { nombre: 'impuesto', icono: 'fa-file-invoice-dollar', alias: ['renta', 'declaración'] },
+            { nombre: 'trabajo', icono: 'fa-briefcase', alias: ['empleo', 'oficina', 'ocupación'] },
+            { nombre: 'dinero', icono: 'fa-coins', alias: ['efectivo', 'plata', 'pago'] },
+            { nombre: 'carro', icono: 'fa-car', alias: ['vehículo', 'automóvil', 'mantenimiento'] },
+            { nombre: 'bicicleta', icono: 'fa-bicycle', alias: ['ciclismo', 'bici', 'movilidad'] },
+            { nombre: 'alcohol', icono: 'fa-wine-glass-alt', alias: ['vino', 'cerveza', 'bebida'] },
+            { nombre: 'musica', icono: 'fa-music', alias: ['canciones', 'audio', 'spotify'] },
+            { nombre: 'libros', icono: 'fa-book-reader', alias: ['leer', 'novela', 'literatura'] },
+            { nombre: 'bebida', icono: 'fa-coffee', alias: ['café', 'té', 'refresco'] },
+            { nombre: 'belleza', icono: 'fa-spa', alias: ['maquillaje', 'estética', 'cosmética'] },
+            { nombre: 'donacion', icono: 'fa-hands-helping', alias: ['caridad', 'iglesia', 'apoyo'] },
+            { nombre: 'fiesta', icono: 'fa-glass-cheers', alias: ['celebración', 'cumpleaños', 'evento'] },
+            { nombre: 'servicios', icono: 'fa-tools', alias: ['arreglo', 'reparación', 'mantenimiento'] },
+            { nombre: 'tecnologia', icono: 'fa-laptop', alias: ['computadora', 'tablet', 'celular'] },
+            { nombre: 'juegos', icono: 'fa-gamepad', alias: ['videojuegos', 'ps4', 'xbox', 'steam'] },
+            { nombre: 'prestamo', icono: 'fa-hand-holding-usd', alias: ['deuda', 'crédito', 'préstamo'] },
+            { nombre: 'inversion', icono: 'fa-chart-line', alias: ['acciones', 'criptos', 'ganancia'] },
+            { nombre: 'trabajo freelance', icono: 'fa-user-tie', alias: ['proyecto', 'cliente', 'contrato'] },
+            { nombre: 'niños', icono: 'fa-baby', alias: ['hijos', 'niño', 'bebé', 'cuidado infantil'] },
+            { nombre: 'limpieza', icono: 'fa-soap', alias: ['aseo', 'productos de limpieza', 'hogar'] },
+            { nombre: 'clases', icono: 'fa-chalkboard-teacher', alias: ['curso', 'tutoría', 'educación'] },
+            { nombre: 'medios', icono: 'fa-tv', alias: ['netflix', 'televisión', 'streaming'] },
+            { nombre: 'seguro', icono: 'fa-umbrella', alias: ['aseguradora', 'cobertura', 'póliza'] }
+        ];
+
+
+        // 🔍 Filtra iconos según nombre o alias
+        function sugerirIconos() {
+        const texto = document.getElementById("nombreCategoria").value.toLowerCase();
+        const sugeridos = iconos.filter(item =>
+            item.nombre.includes(texto) ||
+            (item.alias && item.alias.some(alias => alias.includes(texto)))
+        );
+        renderIconos(sugeridos.slice(0, 6)); // solo los primeros 6
+        }
+
+        // 🎨 Muestra lista de iconos limitada
+        function renderIconos(lista = iconos.slice(0, 6)) {
+        const contenedor = document.getElementById("iconoSelector");
+        contenedor.innerHTML = '';
+
+        lista.forEach(item => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "icono-btn";
+            btn.title = item.nombre;
+            btn.innerHTML = `<i class="fas ${item.icono}"></i>`;
+            btn.onclick = () => {
+            document.getElementById("iconoInput").value = item.icono;
+            document.querySelectorAll('.icono-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            };
+            contenedor.appendChild(btn);
+        });
+        }
+
+        function abrirModalCategoria() {
+            const modal = document.getElementById("modalCategoria");
+            if (modal) {
+            modal.style.display = "flex";
+            modal.classList.add("show");
+            modal.classList.remove("hide");
+            }
+        }
+
+        function cerrarModalCategoria() {
+            const modal = document.getElementById("modalCategoria");
+            if (modal) {
+            modal.classList.add("hide");
+            modal.classList.remove("show");
+            modal.addEventListener('animationend', function handler() {
+                modal.style.display = "none";
+                modal.classList.remove("hide");
+                modal.removeEventListener('animationend', handler);
+            });
+            }
+        }
+
+        window.addEventListener("click", function (e) {
+            const modal = document.getElementById("modalCategoria");
+            if (modal && e.target === modal) cerrarModalCategoria();
+        });
+
+        // Inicial
+        renderIconos();
+
+
+        //Funcion no recargar la pagina 
+        document.getElementById('formCrearCategoria').addEventListener('submit', function(event) {
+  event.preventDefault(); // Evita que recargue
+
+  const form = event.target;
+  const formData = new FormData(form);
+
+  fetch(form.action, {
+    method: 'POST',
+    body: formData,
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      const grid = document.querySelector('.categorias-grid');
+      const nuevaCategoria = data.categoria;
+
+      // Crear input radio
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'categoria_id';
+      input.value = nuevaCategoria.id;
+      input.id = 'cat' + nuevaCategoria.id;
+      input.hidden = true;
+      input.required = true;
+      input.checked = true;
+
+      // Crear label
+      const label = document.createElement('label');
+      label.setAttribute('for', input.id);
+      label.className = 'categoria-tarjeta';
+      label.innerHTML = `<i class="fa-solid ${nuevaCategoria.icono}"></i><br>${nuevaCategoria.nombre}`;
+
+      // Insertar antes del botón "Agregar categoría"
+      const btnAgregar = document.querySelector('.categoria-tarjeta.agregar-categoria');
+      grid.insertBefore(input, btnAgregar);
+      grid.insertBefore(label, btnAgregar);
+
+      // Cerrar el modal
+      cerrarModalCategoria();
+
+      // Limpiar formulario e icono seleccionado
+      form.reset();
+      document.getElementById("iconoInput").value = '';
+      renderIconos();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  })
+  .catch(error => {
+    alert('Error al guardar categoría: ' + error);
+  });
+});
+
+
+    </script>
+
 
 
 
