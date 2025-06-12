@@ -13,46 +13,45 @@
 
 <!-- Tablero Kanban -->
 <div class="kanban-board">
-  <!-- Columna Por Hacer -->
+  <!-- Por Hacer -->
   <div class="kanban-column">
     <h3>Por Hacer</h3>
     <div class="kanban-tasks" id="todo">
       {% for tarea in tareas if tarea.estado == 'todo' %}
-        <div class="kanban-task" draggable="true">{{ tarea.titulo | e }}</div>
+        <div class="kanban-task" draggable="true" data-id="{{ tarea.id }}">{{ tarea.titulo | e }}</div>
       {% endfor %}
     </div>
   </div>
 
-  <!-- Columna En Proceso -->
+  <!-- En Proceso -->
   <div class="kanban-column">
     <h3>En Proceso</h3>
     <div class="kanban-tasks" id="in-progress">
       {% for tarea in tareas if tarea.estado == 'in-progress' %}
-        <div class="kanban-task" draggable="true">{{ tarea.titulo | e }}</div>
+        <div class="kanban-task" draggable="true" data-id="{{ tarea.id }}">{{ tarea.titulo | e }}</div>
       {% endfor %}
     </div>
   </div>
 
-  <!-- Columna Completado -->
+  <!-- Completado -->
   <div class="kanban-column">
     <h3>Completado</h3>
     <div class="kanban-tasks" id="done">
       {% for tarea in tareas if tarea.estado == 'done' %}
-        <div class="kanban-task" draggable="true">{{ tarea.titulo | e }}</div>
+        <div class="kanban-task" draggable="true" data-id="{{ tarea.id }}">{{ tarea.titulo | e }}</div>
       {% endfor %}
     </div>
   </div>
 </div>
 
-<!-- Calendario con FullCalendar -->
+<!-- Calendario -->
 <h2 style="margin-top: 40px;">Calendario de Tareas</h2>
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-
 <div id="calendar"></div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   const calendarEl = document.getElementById('calendar');
   const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'dayGridMonth',
@@ -64,22 +63,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
       fetch('/actualizar_tarea', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          titulo: titulo,
-          nueva_fecha: nuevaFecha
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: titulo, nueva_fecha: nuevaFecha })
       })
-      .then(response => response.json())
+      .then(res => res.json())
       .then(data => {
         if (!data.exito) {
           alert('Error al actualizar tarea');
           info.revert();
         }
       })
-      .catch(error => {
+      .catch(() => {
         alert('Error de conexión');
         info.revert();
       });
@@ -100,29 +94,54 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- Script arrastrar y soltar Kanban -->
+<!-- Script arrastrar y soltar -->
 <script>
-const columns = document.querySelectorAll('.kanban-tasks');
-let dragged = null;
+document.addEventListener('DOMContentLoaded', () => {
+  let dragged = null;
 
-document.querySelectorAll('.kanban-task').forEach(task => {
-  task.addEventListener('dragstart', () => {
-    dragged = task;
-    task.classList.add('dragging');
+  function asignarEventosArrastrar() {
+    document.querySelectorAll('.kanban-task').forEach(task => {
+      task.addEventListener('dragstart', () => {
+        dragged = task;
+        task.classList.add('dragging');
+      });
+
+      task.addEventListener('dragend', () => {
+        task.classList.remove('dragging');
+        dragged = null;
+      });
+    });
+  }
+
+  const columns = document.querySelectorAll('.kanban-tasks');
+
+  columns.forEach(column => {
+    column.addEventListener('dragover', e => e.preventDefault());
+
+    column.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragged) {
+        column.appendChild(dragged);
+        const nuevoEstado = column.id;
+        const tareaId = dragged.getAttribute('data-id');
+
+        fetch('/actualizar_tarea', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: tareaId, nuevo_estado: nuevoEstado })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.exito) {
+            alert('Error al actualizar el estado');
+          }
+        });
+        asignarEventosArrastrar(); // Reasignar eventos después del drop
+      }
+    });
   });
 
-  task.addEventListener('dragend', () => {
-    task.classList.remove('dragging');
-    dragged = null;
-  });
-});
-
-columns.forEach(column => {
-  column.addEventListener('dragover', e => {
-    e.preventDefault();
-    const afterElement = [...column.querySelectorAll('.kanban-task')].find(el => el === dragged);
-    if (!afterElement) column.appendChild(dragged);
-  });
+  asignarEventosArrastrar(); // Inicializar
 });
 </script>
 {% endblock %}

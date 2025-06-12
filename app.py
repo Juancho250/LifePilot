@@ -157,6 +157,8 @@ def panel():
 #---------------------------------------#
 #----Funciones de la seccion tareas-----#
 #---------------------------------------#
+# Mostrar y crear tareas
+# Mostrar y crear tareas
 @app.route('/tareas', methods=['GET', 'POST'])
 def tareas():
     if 'logueado' not in session:
@@ -170,15 +172,15 @@ def tareas():
         fecha_limite = request.form.get('fecha_limite')
         usuario_id = session['usuario_id']
 
+        # Insertar tarea asociada al usuario actual
         cursor.execute('''
             INSERT INTO tareas (titulo, estado, usuario_id, fecha_limite) 
             VALUES (%s, %s, %s, %s)
-''', (titulo, estado, usuario_id, fecha_limite))
-
+        ''', (titulo, estado, usuario_id, fecha_limite))
 
         mysql.connection.commit()
 
-    # Mostrar tareas
+    # Obtener tareas del usuario actual
     cursor.execute('SELECT * FROM tareas WHERE usuario_id = %s', (session['usuario_id'],))
     tareas_usuario = cursor.fetchall()
     cursor.close()
@@ -186,37 +188,52 @@ def tareas():
     return render_template('tareas.html', usuario=session['usuario'], tareas=tareas_usuario)
 
 
-#Actualizar tarea#
+# Actualizar tarea
 @app.route('/actualizar_tarea', methods=['POST'])
 def actualizar_tarea():
     if 'logueado' not in session:
         return jsonify({'exito': False, 'error': 'No autorizado'})
 
     data = request.get_json()
-    titulo = data.get('titulo')
+    tarea_id = data.get('id')
     nueva_fecha = data.get('nueva_fecha')
+    nuevo_estado = data.get('nuevo_estado')
 
-    if not titulo or not nueva_fecha:
-        return jsonify({'exito': False, 'error': 'Datos incompletos'})
+    if not tarea_id:
+        return jsonify({'exito': False, 'error': 'ID de tarea no proporcionado'})
 
     try:
         cursor = mysql.connection.cursor()
-        cursor.execute('''
-            UPDATE tareas 
-            SET fecha_limite = %s 
-            WHERE titulo = %s AND usuario_id = %s
-        ''', (nueva_fecha, titulo, session['usuario_id']))
+
+        # Construimos la consulta dinámicamente
+        campos = []
+        valores = []
+
+        if nueva_fecha:
+            campos.append("fecha_limite = %s")
+            valores.append(nueva_fecha)
+        if nuevo_estado:
+            campos.append("estado = %s")
+            valores.append(nuevo_estado)
+
+        if not campos:
+            return jsonify({'exito': False, 'error': 'Nada que actualizar'})
+
+        valores.append(tarea_id)
+        valores.append(session['usuario_id'])
+
+        consulta = f"UPDATE tareas SET {', '.join(campos)} WHERE id = %s AND usuario_id = %s"
+        cursor.execute(consulta, tuple(valores))
         mysql.connection.commit()
         modificado = cursor.rowcount
         cursor.close()
 
         if modificado == 0:
-            return jsonify({'exito': False, 'error': 'Tarea no encontrada'})
+            return jsonify({'exito': False, 'error': 'Tarea no encontrada o sin cambios'})
 
         return jsonify({'exito': True})
     except Exception as e:
         return jsonify({'exito': False, 'error': str(e)})
-
 
 
 
