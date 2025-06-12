@@ -18,7 +18,7 @@ header, .contenido-superpuesto {
   text-align: center;
 }
 
-#video-fondo, .overlay, .pagina-inicio::before {
+.overlay, .pagina-inicio::before {
   position: fixed;
   pointer-events: none;
 }
@@ -137,6 +137,12 @@ header, .contenido-superpuesto {
   max-width: 650px;
   /*border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);*/
+}
+
+.logo-inicio video {
+  border: none;
+  margin: 0;
+  padding: 0;
 }
 
 .botones-usuario {
