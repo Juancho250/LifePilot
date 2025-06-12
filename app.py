@@ -280,8 +280,8 @@ def movimientos():
                 return redirect(url_for('movimientos'))
 
             cursor.execute("""
-                INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, categoria_id, deuda_id)
-                VALUES (%s, %s, %s, %s, %s, %s, NULL)
+                INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, categoria_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """, (fecha, descripcion, valor, tipo, usuario_id, categoria_id))
             mysql.connection.commit()
             return redirect(url_for('movimientos'))
@@ -333,7 +333,7 @@ def movimientos():
             SELECT m.*, c.nombre AS categoria_nombre, c.icono AS categoria_icono
             FROM movimientos m
             LEFT JOIN categorias c ON m.categoria_id = c.id
-            WHERE m.usuario_id = %s AND m.tipo IN ('ingreso', 'gasto')
+            WHERE m.usuario_id = %s
               AND DATE(m.fecha) BETWEEN %s AND %s
             ORDER BY {orden_sql}
         """, (usuario_id, fecha_desde, fecha_hasta))
@@ -348,6 +348,13 @@ def movimientos():
             fecha_str = fecha_obj.strftime('%Y-%m-%d') if isinstance(fecha_obj, (datetime, date)) else m['fecha']
             fecha_legible = formatear_fecha_humana(fecha_str)
             movimientos_agrupados[fecha_legible].append(m)
+
+        # --------------------------------------------------------------------
+        # Mostrar solo el primer grupo si no se pidió ver todo
+        # --------------------------------------------------------------------
+        mostrar_todo = request.args.get('ver_todo') == '1'
+        if not mostrar_todo:
+            movimientos_agrupados = dict(list(movimientos_agrupados.items())[:1])
 
         # --------------------------------------------------------------------
         # Calcular saldo
@@ -404,7 +411,8 @@ def movimientos():
             prestamos=prestamos,
             seccion=seccion,
             dia_actual=dia_param,
-            usuario=session.get('usuario')
+            usuario=session.get('usuario'),
+            mostrar_todo=mostrar_todo
         )
 
     finally:
