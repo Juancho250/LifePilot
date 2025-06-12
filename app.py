@@ -173,7 +173,9 @@ def tareas():
         cursor.execute('''
             INSERT INTO tareas (titulo, estado, usuario_id, fecha_limite) 
             VALUES (%s, %s, %s, %s)
-        ''', (titulo, estado, usuario_id, fecha_limite))
+''', (titulo, estado, usuario_id, fecha_limite))
+
+
         mysql.connection.commit()
 
     # Mostrar tareas
