@@ -157,6 +157,8 @@ def panel():
 #---------------------------------------#
 #----Funciones de la seccion tareas-----#
 #---------------------------------------#
+# Mostrar y crear tareas
+# Mostrar y crear tareas
 @app.route('/tareas', methods=['GET', 'POST'])
 def tareas():
     if 'logueado' not in session:
@@ -170,15 +172,15 @@ def tareas():
         fecha_limite = request.form.get('fecha_limite')
         usuario_id = session['usuario_id']
 
+        # Insertar tarea asociada al usuario actual
         cursor.execute('''
             INSERT INTO tareas (titulo, estado, usuario_id, fecha_limite) 
             VALUES (%s, %s, %s, %s)
-''', (titulo, estado, usuario_id, fecha_limite))
-
+        ''', (titulo, estado, usuario_id, fecha_limite))
 
         mysql.connection.commit()
 
-    # Mostrar tareas
+    # Obtener tareas del usuario actual
     cursor.execute('SELECT * FROM tareas WHERE usuario_id = %s', (session['usuario_id'],))
     tareas_usuario = cursor.fetchall()
     cursor.close()
@@ -186,33 +188,35 @@ def tareas():
     return render_template('tareas.html', usuario=session['usuario'], tareas=tareas_usuario)
 
 
-# Actualizar estado de una tarea
-@app.route('/actualizar_estado', methods=['POST'])
-def actualizar_estado():
+#Actualizar tarea#
+@app.route('/actualizar_tarea', methods=['POST'])
+def actualizar_tarea():
     if 'logueado' not in session:
         return jsonify({'exito': False, 'error': 'No autorizado'})
 
     data = request.get_json()
-    tarea_id = data.get('id')  # Ahora usamos ID, no título
-    nuevo_estado = data.get('nuevo_estado')
+    titulo = data.get('titulo')
+    nueva_fecha = data.get('nueva_fecha')
 
-    if not tarea_id or not nuevo_estado:
+    if not titulo or not nueva_fecha:
         return jsonify({'exito': False, 'error': 'Datos incompletos'})
 
     try:
         cursor = mysql.connection.cursor()
         cursor.execute('''
             UPDATE tareas 
-            SET estado = %s 
-            WHERE id = %s AND usuario_id = %s
-        ''', (nuevo_estado, tarea_id, session['usuario_id']))
+            SET fecha_limite = %s 
+            WHERE titulo = %s AND usuario_id = %s
+        ''', (nueva_fecha, titulo, session['usuario_id']))
         mysql.connection.commit()
         cursor.close()
+
+        if modificado == 0:
+            return jsonify({'exito': False, 'error': 'Tarea no encontrada'})
 
         return jsonify({'exito': True})
     except Exception as e:
         return jsonify({'exito': False, 'error': str(e)})
-
 
 
 
@@ -279,8 +283,8 @@ def movimientos():
                 return redirect(url_for('movimientos'))
 
             cursor.execute("""
-                INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, categoria_id, deuda_id)
-                VALUES (%s, %s, %s, %s, %s, %s, NULL)
+                INSERT INTO movimientos (fecha, descripcion, valor, tipo, usuario_id, categoria_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """, (fecha, descripcion, valor, tipo, usuario_id, categoria_id))
             mysql.connection.commit()
             return redirect(url_for('movimientos'))
@@ -332,7 +336,7 @@ def movimientos():
             SELECT m.*, c.nombre AS categoria_nombre, c.icono AS categoria_icono
             FROM movimientos m
             LEFT JOIN categorias c ON m.categoria_id = c.id
-            WHERE m.usuario_id = %s AND m.tipo IN ('ingreso', 'gasto')
+            WHERE m.usuario_id = %s
               AND DATE(m.fecha) BETWEEN %s AND %s
             ORDER BY {orden_sql}
         """, (usuario_id, fecha_desde, fecha_hasta))
@@ -347,6 +351,13 @@ def movimientos():
             fecha_str = fecha_obj.strftime('%Y-%m-%d') if isinstance(fecha_obj, (datetime, date)) else m['fecha']
             fecha_legible = formatear_fecha_humana(fecha_str)
             movimientos_agrupados[fecha_legible].append(m)
+
+        # --------------------------------------------------------------------
+        # Mostrar solo el primer grupo si no se pidió ver todo
+        # --------------------------------------------------------------------
+        mostrar_todo = request.args.get('ver_todo') == '1'
+        if not mostrar_todo:
+            movimientos_agrupados = dict(list(movimientos_agrupados.items())[:1])
 
         # --------------------------------------------------------------------
         # Calcular saldo
@@ -403,7 +414,8 @@ def movimientos():
             prestamos=prestamos,
             seccion=seccion,
             dia_actual=dia_param,
-            usuario=session.get('usuario')
+            usuario=session.get('usuario'),
+            mostrar_todo=mostrar_todo
         )
 
     finally:

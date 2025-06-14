@@ -31,53 +31,53 @@
         </div>
 
         <!-- Ingreso/Gasto -->
-<form method="POST" action="{{ url_for('movimientos') }}" id="form-movimiento" style="display: none;">
-  <input type="hidden" name="tipo" id="tipo">
+        <form method="POST" action="{{ url_for('movimientos') }}" id="form-movimiento" style="display: none;">
+          <input type="hidden" name="tipo" id="tipo">
 
-  <label>Fecha</label>
-  <input type="date" name="fecha" required id="fecha-mov">
+          <label>Fecha</label>
+          <input type="date" name="fecha" required id="fecha-mov">
 
-  <label>Frecuencia</label>
-  <select name="frecuencia">
-    <option value="una_vez">Una vez</option>
-    <option value="diario">Diario</option>
-    <option value="semanal">Semanal</option>
-    <option value="mensual">Mensual</option>
-  </select>
+          <label>Frecuencia</label>
+          <select name="frecuencia">
+            <option value="una_vez">Una vez</option>
+            <option value="diario">Diario</option>
+            <option value="semanal">Semanal</option>
+            <option value="mensual">Mensual</option>
+          </select>
 
-  <label>Descripción</label>
-  <input type="text" name="descripcion" placeholder="Ej: Pago de salario, almuerzo..." required id="descripcion-mov">
+          <label>Descripción</label>
+          <input type="text" name="descripcion" placeholder="Ej: Pago de salario, almuerzo..." required id="descripcion-mov">
 
-  <label>Monto</label>
-  <input type="number" name="valor" step="0.01" placeholder="Ej: 25000" required id="valor-mov">
+          <label>Monto</label>
+          <input type="number" name="valor" step="0.01" placeholder="Ej: 25000" required id="valor-mov">
 
-  <label>Categoría</label>
-  <!-- Mostrar categorías -->
-  <div class="categorias-grid">
-    {% for categoria in categorias %}
-      <input
-        type="radio"
-        name="categoria_id"
-        value="{{ categoria.id }}"
-        id="cat{{ categoria.id }}"
-        class="categoria-radio"
-        required
-      >
-      <label for="cat{{ categoria.id }}" class="categoria-tarjeta">
-        <i class="fa-solid {{ categoria.icono }}"></i><br>
-        {{ categoria.nombre }}
-      </label>
-    {% endfor %}
+          <label>Categoría</label>
+          <!-- Mostrar categorías -->
+          <div class="categorias-grid">
+            {% for categoria in categorias %}
+              <input
+                type="radio"
+                name="categoria_id"
+                value="{{ categoria.id }}"
+                id="cat{{ categoria.id }}"
+                class="categoria-radio"
+                required
+              >
+              <label for="cat{{ categoria.id }}" class="categoria-tarjeta">
+                <i class="fa-solid {{ categoria.icono }}"></i><br>
+                {{ categoria.nombre }}
+              </label>
+            {% endfor %}
 
-    <!-- Tarjeta para agregar nueva categoría -->
-    <div class="categoria-tarjeta agregar-categoria" onclick="abrirModalCategoria()">
-      <i class="fas fa-plus"></i><br>
-      Agregar categoría
-    </div>
-  </div>
+            <!-- Tarjeta para agregar nueva categoría -->
+            <div class="categoria-tarjeta agregar-categoria" onclick="abrirModalCategoria()">
+              <i class="fas fa-plus"></i><br>
+              Agregar categoría
+            </div>
+          </div>
 
-  <button type="submit" class="guardar-btn">✓ Guardar</button>
-</form>
+          <button type="submit" class="guardar-btn">✓ Guardar</button>
+        </form>
 
 
         <!--Prestamos-->
@@ -188,48 +188,37 @@
       <div id="seccionIngresos" class="seccion {% if seccion == 'ingresos' %}activa{% endif %}">
         <div class="tabla-responsive">
           <table class="tabla-movimientos">
-            <tbody>
-              {% set contador = 0 %}
-              {% for fecha_legible, items in movimientos_agrupados.items() %}
-                {% if not mostrar_todo and contador >= 1 %}
-                  <tr>
-                    <td colspan="3" style="text-align:center;">
-                      <a href="{{ url_for('movimientos', ver_todo=1) }}">Ver más movimientos</a>
-                    </td>
-                  </tr>
-                  {# Aquí no usamos break, simplemente omitimos mostrar más filas #}
-                {% else %}
-                  <tr>
-                    <td colspan="3"><strong>{{ fecha_legible }}</strong></td>
-                  </tr>
-                  {% for item in items %}
-                    <tr class="fila-modal-detalles"
-                        data-fecha="{{ item.fecha }}"
-                        data-tipo="{{ item.tipo }}"
-                        data-estado="{{ item.estado if item.estado else 'desconocido' }}"
-                        data-valor="{{ '%.2f'|format(item.valor) }}"
-                        data-descripcion="{{ item.descripcion }}">
-                      <td>{{ item.fecha }}</td>
-                      <td class="{% if item.tipo == 'ingreso' %}tipo-ingreso{% else %}tipo-gasto{% endif %}">
-                        {{ item.tipo|capitalize }}
-                      </td>
-                      <td>${{ '%.2f'|format(item.valor) }}</td>
-                    </tr>
-                  {% endfor %}
-                  {% set contador = contador + 1 %}
-                {% endif %}
-              {% endfor %}
-              {# Si no mostrás todo y hay más de un grupo, el link aparecerá después del primer grupo #}
-              {% if not mostrar_todo and movimientos_agrupados|length > 1 %}
-                <tr>
-                  <td colspan="3" style="text-align:center;">
-                    <a href="{{ url_for('movimientos', ver_todo=1) }}">Ver más movimientos</a>
-                  </td>
-                </tr>
-              {% endif %}
-            </tbody>
+  <tbody>
+    {% for fecha_legible, items in movimientos_agrupados.items() %}
+      <tr>
+        <td colspan="3"><strong>{{ fecha_legible }}</strong></td>
+      </tr>
+      {% for item in items %}
+        <tr class="fila-modal-detalles"
+            data-fecha="{{ item.fecha }}"
+            data-tipo="{{ item.tipo }}"
+            data-valor="{{ '%.2f'|format(item.valor) }}"
+            data-descripcion="{{ item.descripcion }}">
+          <td>{{ item.fecha }}</td>
+          <td class="{% if item.tipo == 'ingreso' %}tipo-ingreso{% else %}tipo-gasto{% endif %}">
+            {{ item.tipo|capitalize }}
+          </td>
+          <td>${{ '%.2f'|format(item.valor) }}</td>
+        </tr>
+      {% endfor %}
+    {% endfor %}
 
-          </table>
+    {% if not mostrar_todo and movimientos_agrupados|length > 0 %}
+      <tr>
+        <td colspan="3" style="text-align:center;">
+          <a href="{{ url_for('movimientos', ver_todo=1) }}">Ver más movimientos</a>
+        </td>
+      </tr>
+    {% endif %}
+  </tbody>
+</table>
+
+
         </div>
       </div>
 
