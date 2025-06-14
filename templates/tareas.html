@@ -18,7 +18,7 @@
     <h3>Por Hacer</h3>
     <div class="kanban-tasks" id="todo">
       {% for tarea in tareas if tarea.estado == 'todo' %}
-        <div class="kanban-task" draggable="true">{{ tarea.titulo | e }}</div>
+        <div class="kanban-task" draggable="true" data-id="{{ tarea.id }}">{{ tarea.titulo | e }}</div>
       {% endfor %}
     </div>
   </div>
@@ -28,7 +28,7 @@
     <h3>En Proceso</h3>
     <div class="kanban-tasks" id="in-progress">
       {% for tarea in tareas if tarea.estado == 'in-progress' %}
-        <div class="kanban-task" draggable="true">{{ tarea.titulo | e }}</div>
+        <div class="kanban-task" draggable="true" data-id="{{ tarea.id }}">{{ tarea.titulo | e }}</div>
       {% endfor %}
     </div>
   </div>
@@ -38,7 +38,7 @@
     <h3>Completado</h3>
     <div class="kanban-tasks" id="done">
       {% for tarea in tareas if tarea.estado == 'done' %}
-        <div class="kanban-task" draggable="true">{{ tarea.titulo | e }}</div>
+        <div class="kanban-task" draggable="true" data-id="{{ tarea.id }}">{{ tarea.titulo | e }}</div>
       {% endfor %}
     </div>
   </div>
@@ -102,27 +102,68 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Script arrastrar y soltar Kanban -->
 <script>
-const columns = document.querySelectorAll('.kanban-tasks');
-let dragged = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const columns = document.querySelectorAll('.kanban-tasks');
+  let dragged = null;
 
-document.querySelectorAll('.kanban-task').forEach(task => {
-  task.addEventListener('dragstart', () => {
-    dragged = task;
-    task.classList.add('dragging');
+  document.querySelectorAll('.kanban-task').forEach(task => {
+    task.addEventListener('dragstart', () => {
+      dragged = task;
+      task.classList.add('dragging');
+    });
+
+    task.addEventListener('dragend', () => {
+      task.classList.remove('dragging');
+      dragged = null;
+    });
   });
 
-  task.addEventListener('dragend', () => {
-    task.classList.remove('dragging');
-    dragged = null;
-  });
-});
+  columns.forEach(column => {
+    column.addEventListener('dragover', e => e.preventDefault());
 
-columns.forEach(column => {
-  column.addEventListener('dragover', e => {
-    e.preventDefault();
-    const afterElement = [...column.querySelectorAll('.kanban-task')].find(el => el === dragged);
-    if (!afterElement) column.appendChild(dragged);
+    column.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragged) {
+        column.appendChild(dragged);
+
+        const nuevoEstado = column.id; // "todo", "in-progress", "done"
+        const id = dragged.dataset.id;
+
+        fetch('/actualizar_estado', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: id,
+            nuevo_estado: nuevoEstado
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (!data.exito) {
+            alert('Error al actualizar estado');
+          }
+        })
+        .catch(error => {
+          alert('Error de conexión');
+        });
+      }
+    });
   });
 });
 </script>
+
+<style>
+/* Asegura que las tareas se vean bien al arrastrar */
+.kanban-task.dragging {
+  opacity: 0.5;
+}
+
+.kanban-tasks {
+  min-height: 150px;
+  padding: 10px;
+}
+</style>
+
 {% endblock %}
