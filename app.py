@@ -700,6 +700,14 @@ def editar_idea(id):
     idea = cursor.fetchone()
     return render_template("editar_idea.html", idea=idea)
 
+@app.route('/tarjeta', methods=['GET'])
+def mostrar_tarjeta():
+    if 'logueado' not in session:
+        return redirect(url_for('iniciar_sesion'))
+    
+    return render_template('tarjeta.html')
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
