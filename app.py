@@ -298,6 +298,13 @@ def movimientos():
     
 
     try:
+
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+        # 📸 Consultar la foto del usuario
+        cursor.execute('SELECT foto FROM usuarios WHERE id = %s', (usuario_id,))
+        resultado_foto = cursor.fetchone()
+        usuario_foto = resultado_foto['foto'] if resultado_foto and resultado_foto['foto'] else None
         # --------------------------------------------------------------------
         # POST: Registrar ingreso o gasto
         # --------------------------------------------------------------------

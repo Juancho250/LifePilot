@@ -6,12 +6,14 @@
 
 <main class="contenedor">
   <div class="panel-izquierdo">
-    <div class="vista-principal registro-container">
+    <div id="dashboard-principal" class="vista-principal dashboard-principal registro-container">
 
       <!-- Saludo y saldo -->
       <div class="encabezado">
         <div class="usuario-saludo">
-          <img src="{{ url_for('static', filename='uploads/' ~ usuario_foto) }}" alt="Foto de perfil" class="foto-perfil" />
+          <img src="{{ url_for('static', filename='uploads/' ~ usuario_foto) }}"
+               alt="Foto de perfil"
+               class="foto-icono" />
           <span>Hola, <strong>{{ usuario }}</strong></span>
         </div>
         <div class="saldo-info">
@@ -25,36 +27,28 @@
 
       <!-- Ver todos -->
       <div class="ver-todos-container">
-        <a href="{{ url_for('movimientos', ver_todo=1) }}" class="btn-ver-todos">
-          📋 Ver todos los movimientos
-        </a>
+        <a href="{{ url_for('movimientos', ver_todo=1) }}" class="btn-ver-todos">📋 Ver todos los movimientos</a>
       </div>
 
-      <!-- Botones tipo tarjeta -->
+      <!-- Botones tipo movimiento -->
       <div class="tipo-selector tarjetas">
         <button onclick="mostrarFormulario('ingreso')" class="tarjeta-btn">
-          <i class="fas fa-wallet icono-grande"></i>
-          <span>Ingreso</span>
+          <i class="fas fa-wallet icono-grande"></i><span>Ingreso</span>
         </button>
         <button onclick="mostrarFormulario('gasto')" class="tarjeta-btn">
-          <i class="fas fa-shopping-cart icono-grande"></i>
-          <span>Gasto</span>
+          <i class="fas fa-shopping-cart icono-grande"></i><span>Gasto</span>
         </button>
         <button onclick="mostrarFormulario('prestamo')" class="tarjeta-btn">
-          <i class="fas fa-hand-holding-usd icono-grande"></i>
-          <span>Préstamo</span>
+          <i class="fas fa-hand-holding-usd icono-grande"></i><span>Préstamo</span>
         </button>
         <button onclick="mostrarFormulario('deuda')" class="tarjeta-btn">
-          <i class="fas fa-credit-card icono-grande"></i>
-          <span>Deuda</span>
+          <i class="fas fa-credit-card icono-grande"></i><span>Deuda</span>
         </button>
       </div>
 
       <!-- Entrada por voz -->
       <div class="voz-entrada-container">
-        <button id="btn-voz" class="btn-voz" onclick="toggleReconocimientoVoz()">
-          🎙️ <span class="ondas"></span>
-        </button>
+        <button id="btn-voz" class="btn-voz" onclick="toggleReconocimientoVoz()">🎙️ <span class="ondas"></span></button>
         <div id="burbuja-input" class="burbuja-input oculto">
           <input type="text" id="textoReconocido" placeholder="Habla ahora..." readonly>
         </div>
@@ -183,40 +177,43 @@
 <!-- SCRIPT para mostrar formularios -->
 <script>
   function mostrarFormulario(tipo) {
-    // Oculta la vista principal
-    const vistaPrincipal = document.querySelector('.vista-principal');
-    if (vistaPrincipal) vistaPrincipal.style.display = 'none';
+    const dashboard = document.getElementById('dashboard-principal');
+    if (dashboard) dashboard.style.display = 'none';
 
-    // Oculta todos los formularios primero
-    const formularios = ['form-movimiento', 'form-prestamo', 'form-deuda'];
-    formularios.forEach(id => {
+    const forms = {
+      'ingreso': 'form-movimiento',
+      'gasto': 'form-movimiento',
+      'prestamo': 'form-prestamo',
+      'deuda': 'form-deuda'
+    };
+
+    Object.values(forms).forEach(id => {
       const form = document.getElementById(id);
       if (form) form.style.display = 'none';
     });
 
-    // Muestra solo el formulario correspondiente
-    if (tipo === 'ingreso' || tipo === 'gasto') {
-      document.getElementById('form-movimiento').style.display = 'block';
-      document.getElementById('tipo').value = tipo;
-    } else if (tipo === 'prestamo') {
-      document.getElementById('form-prestamo').style.display = 'block';
-    } else if (tipo === 'deuda') {
-      document.getElementById('form-deuda').style.display = 'block';
+    const formToShow = forms[tipo];
+    if (formToShow) {
+      const form = document.getElementById(formToShow);
+      if (form) form.style.display = 'block';
+
+      if (tipo === 'ingreso' || tipo === 'gasto') {
+        const tipoInput = document.getElementById('tipo');
+        if (tipoInput) tipoInput.value = tipo;
+      }
     }
   }
 
   function volverAlInicio() {
-    // Oculta todos los formularios
+    const dashboard = document.getElementById('dashboard-principal');
+    if (dashboard) dashboard.style.display = 'block';
+
     ['form-movimiento', 'form-prestamo', 'form-deuda'].forEach(id => {
       const form = document.getElementById(id);
       if (form) form.style.display = 'none';
     });
-
-    // Muestra la vista principal
-    const vistaPrincipal = document.querySelector('.vista-principal');
-    if (vistaPrincipal) vistaPrincipal.style.display = 'block';
   }
 </script>
 
-
 {% endblock %}
+
