@@ -14,13 +14,13 @@
   min-width: 500px;          /* Antes: 550px (lo reducimos para mayor responsividad) */
   background: #111;
   color: #f5f5f5;
-  padding: 2rem;
-  border-radius: 1.5rem;
+  border-radius: 2rem;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
 }
 
 /* Panel de contenido central (dashboard/formularios) */
 .contenedor-central {
+  border-radius: 2rem;
   position: relative;
   flex: 1;                    /* 🔄 Usa todo el espacio restante */
   min-width: 0;
@@ -42,8 +42,17 @@
   height: 100%;
 }
 
+#dashboard-principal{
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  border-radius: 1.5rem;
+  background-color: #000;
+}
+
+
 /* Formularios y dashboard ocultos por defecto */
-#dashboard-principal,
 #form-movimiento,
 #form-prestamo,
 #form-deuda {
@@ -87,13 +96,13 @@
 
 /* Información del saldo */
 .saldo-info {
+  color: #fff;
   margin-top: 1rem;
   text-align: center;
 }
 .saldo-info p {
   margin: 0;
   font-size: 0.9rem;
-  color: #aaa;
 }
 .saldo-info h2 {
   margin: 0;
@@ -111,11 +120,12 @@
 
 /* Selector de tipo (botones de tarjeta) */
 .tipo-selector {
+  width: 100%;
   display: flex;
+  justify-content: space-around;
   gap: 1rem;
   justify-content: center;
   flex-wrap: wrap;
-  margin-bottom: 2rem;
   overflow: hidden;
 }
 
@@ -128,9 +138,10 @@
   border-radius: 50%;           /* 🔵 Hace que sea completamente redondo */
   color: white;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;            /* Ícono más visible */
+  font-size: 1rem;            /* Ícono más visible */
   cursor: pointer;
   transition: background 0.3s ease;
   flex-shrink: 0;               /* ❌ No se reduce si falta espacio */
@@ -141,7 +152,7 @@
 
 
 .icono-grande {
-  font-size: .5rem;
+  font-size: 1.rem;
   margin-bottom: 0.4rem;
 }
 
@@ -224,16 +235,13 @@ form select {
 .btn-regresar {
   background: none;
   border: none;
-  color: #007bff;
-  font-size: 1rem;
+  color: #000;
+  font-size: 1.2rem;
   margin-bottom: 1rem;
   cursor: pointer;
   display: block;
   text-align: left;
   padding: 0;
-}
-.btn-regresar:hover {
-  text-decoration: underline;
 }
 
 /* Voz e input */
@@ -278,15 +286,88 @@ form select {
   }
 
   .contenedor-central {
+    position: relative;
+    min-height: auto;
     height: auto;
-    min-height: 400px;
+    overflow-y: visible;
   }
 
-  .tipo-selector {
-    flex-direction: column;
+  .contenedor-central > * {
+    position: relative;
+    height: auto;
+    overflow: visible;
   }
 
   .tarjeta-btn {
     flex: 1 1 100%;
   }
+}
+
+
+.btn-guardar:hover,
+.modal-contenido button:hover,
+.panel-izquierdo button:hover {
+  background-color: #0056b3;
+}
+
+
+
+.categorias-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.categoria-tarjeta {
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  width: 100px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.categoria-tarjeta i {
+  font-size: 20px;
+  margin-bottom: 5px;
+}
+
+input[type="radio"]:checked + .categoria-tarjeta {
+  border-color: #007bff;
+  background-color: #eaf4ff;
+}
+
+.categoria-tarjeta.agregar-categoria {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 2px dashed #bbb;
+  cursor: pointer;
+  text-align: center;
+}
+
+
+.icono-sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.icono-sugerencia-item {
+  cursor: pointer;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #f8f8f8;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+
+.icono-sugerencia-item:hover {
+  background: #eee;
 }

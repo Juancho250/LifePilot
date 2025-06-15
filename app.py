@@ -641,6 +641,11 @@ def exportar_pdf():
 
 
 
+@app.route('/cartera')
+def cartera():
+    return render_template('cartera.html')
+
+
 @app.route('/cerrar_sesion')
 def cerrar_sesion():
     session.clear()

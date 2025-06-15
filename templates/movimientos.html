@@ -27,7 +27,7 @@
         <h3 class="titulo">¿Qué deseas registrar hoy?</h3>
 
         <div class="ver-todos-container">
-          <a href="{{ url_for('movimientos', ver_todo=1) }}" class="btn-ver-todos">📋 Ver todos los movimientos</a>
+          <a href="{{ url_for('movimientos', ver_todo=1) }}" class="btn-ver-todos">Ver todos los movimientos</a>
         </div>
 
         <div class="tipo-selector tarjetas">
@@ -55,7 +55,7 @@
 
       <!-- Formulario Ingreso/Gasto -->
       <form method="POST" action="{{ url_for('movimientos') }}" id="form-movimiento">
-        <button type="button" class="btn-regresar" onclick="volverAlInicio()">← Regresar</button>
+        <button type="button" class="btn-regresar fa-solid fa-arrow-left" onclick="volverAlInicio()"></button>
         <input type="hidden" name="tipo" id="tipo">
         <label>Fecha</label>
         <input type="date" name="fecha" required id="fecha-mov">
@@ -87,7 +87,7 @@
 
       <!-- Formulario Préstamo -->
       <form method="POST" action="{{ url_for('registrar_prestamo') }}" id="form-prestamo">
-        <button type="button" class="btn-regresar" onclick="volverAlInicio()">← Regresar</button>
+        <button type="button" class="btn-regresar" onclick="volverAlInicio()"></button>
         <label>Fecha</label>
         <input type="date" name="fecha" required id="fecha-prestamo">
         <label>Frecuencia</label>
@@ -108,7 +108,7 @@
 
       <!-- Formulario Deuda -->
       <form method="POST" action="{{ url_for('registrar_deuda') }}" id="form-deuda">
-        <button class="btn-regresar" onclick="volverAlInicio()">← Regresar</button>
+        <button class="btn-regresar" onclick="volverAlInicio()"></button>
         <label>Fecha</label>
         <input type="date" name="fecha" required id="fecha-deuda">
         <label>Frecuencia</label>
