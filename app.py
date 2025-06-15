@@ -188,17 +188,47 @@ def tareas():
     return render_template('tareas.html', usuario=session['usuario'], tareas=tareas_usuario)
 
 
-#Actualizar tarea#
+
+@app.route('/actualizar_estado', methods=['POST'])
+def actualizar_estado():
+    if 'logueado' not in session:
+        return jsonify({'exito': False, 'error': 'No autorizado'})
+
+    data = request.get_json()
+    tarea_id = data.get('id')
+    nuevo_estado = data.get('nuevo_estado')
+
+    if not tarea_id or not nuevo_estado:
+        return jsonify({'exito': False, 'error': 'Datos incompletos'})
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            UPDATE tareas 
+            SET estado = %s 
+            WHERE id = %s AND usuario_id = %s
+        ''', (nuevo_estado, tarea_id, session['usuario_id']))
+        mysql.connection.commit()
+        actualizado = cursor.rowcount
+        cursor.close()
+
+        if actualizado == 0:
+            return jsonify({'exito': False, 'error': 'Tarea no encontrada'})
+        return jsonify({'exito': True})
+    except Exception as e:
+        return jsonify({'exito': False, 'error': str(e)})
+
+
 @app.route('/actualizar_tarea', methods=['POST'])
 def actualizar_tarea():
     if 'logueado' not in session:
         return jsonify({'exito': False, 'error': 'No autorizado'})
 
     data = request.get_json()
-    titulo = data.get('titulo')
+    tarea_id = data.get('id')
     nueva_fecha = data.get('nueva_fecha')
 
-    if not titulo or not nueva_fecha:
+    if not tarea_id or not nueva_fecha:
         return jsonify({'exito': False, 'error': 'Datos incompletos'})
 
     try:
@@ -206,19 +236,17 @@ def actualizar_tarea():
         cursor.execute('''
             UPDATE tareas 
             SET fecha_limite = %s 
-            WHERE titulo = %s AND usuario_id = %s
-        ''', (nueva_fecha, titulo, session['usuario_id']))
+            WHERE id = %s AND usuario_id = %s
+        ''', (nueva_fecha, tarea_id, session['usuario_id']))
         mysql.connection.commit()
+        actualizado = cursor.rowcount
         cursor.close()
 
-        if modificado == 0:
+        if actualizado == 0:
             return jsonify({'exito': False, 'error': 'Tarea no encontrada'})
-
         return jsonify({'exito': True})
     except Exception as e:
         return jsonify({'exito': False, 'error': str(e)})
-
-
 
 
 
@@ -266,6 +294,8 @@ def movimientos():
 
     usuario_id = session['usuario_id']
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    
 
     try:
         # --------------------------------------------------------------------
@@ -415,8 +445,10 @@ def movimientos():
             seccion=seccion,
             dia_actual=dia_param,
             usuario=session.get('usuario'),
+            usuario_foto=usuario_foto,  # 👈 Esto
             mostrar_todo=mostrar_todo
         )
+
 
     finally:
         cursor.close()

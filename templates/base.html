@@ -331,76 +331,10 @@
     </script>
 
 
+  
 
 
 
-    <script>
-        function capitalizePrimeraLetra(string) {
-            return string.charAt(0).toUpperCase() + string.slice(1);
-        }
-
-        function mostrarSeccion(seccion) {
-            const secciones = ['ingresos', 'deudas', 'prestamos'];
-            secciones.forEach(s => {
-                const seccionElem = document.getElementById('seccion' + capitalizePrimeraLetra(s));
-                const btnElem = document.getElementById('btn' + capitalizePrimeraLetra(s));
-                if (seccionElem) seccionElem.classList.remove('activa');
-                if (btnElem) btnElem.classList.remove('activo');
-            });
-            const seccionActiva = document.getElementById('seccion' + capitalizePrimeraLetra(seccion));
-            const btnActivo = document.getElementById('btn' + capitalizePrimeraLetra(seccion));
-            if (seccionActiva) seccionActiva.classList.add('activa');
-            if (btnActivo) btnActivo.classList.add('activo');
-        }
-
-        function cambiarSeccion(seccion) {
-            const url = new URL(window.location.href);
-            url.searchParams.set('seccion', seccion);
-            window.location.href = url.toString();
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const seccion = new URLSearchParams(window.location.search).get("seccion") || "ingresos";
-            mostrarSeccion(seccion);
-        });
-
-    </script>
-
-
-
-    <script>
-        function mostrarFormulario(tipo) {
-            // Oculta todas los formularios
-            document.getElementById('form-movimiento').style.display = 'none';
-            document.getElementById('form-prestamo').style.display = 'none';
-            document.getElementById('form-deuda').style.display = 'none';
-
-            // Muestra solo el formulario seleccionado
-            if (tipo === 'ingreso' || tipo === 'gasto') {
-                document.getElementById('form-movimiento').style.display = 'block';
-                document.getElementById('tipo').value = tipo;
-            } else if (tipo === 'prestamo') {
-                document.getElementById('form-prestamo').style.display = 'block';
-            } else if (tipo === 'deuda') {
-                document.getElementById('form-deuda').style.display = 'block';
-            }
-
-            // Oculta las tarjetas
-            const tarjetas = document.querySelector('.tipo-selector.tarjetas');
-            if (tarjetas) tarjetas.style.display = 'none';
-            }
-
-            // Función para ocultar formularios y volver a mostrar las tarjetas
-            function ocultarFormulariosYMostrarTarjetas() {
-            document.getElementById('form-movimiento').style.display = 'none';
-            document.getElementById('form-prestamo').style.display = 'none';
-            document.getElementById('form-deuda').style.display = 'none';
-
-            const tarjetas = document.querySelector('.tipo-selector.tarjetas');
-            if (tarjetas) tarjetas.style.display = 'flex'; // o block, según tu estilo
-            }
-
-    </script>
 
 
 <script>
