@@ -2,134 +2,131 @@
 
 {% block titulo %}Gestión de movimientos{% endblock %}
 
-{% block contenido %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gestion_movimientos.css') }}">
+{% endblock %}
 
+
+{% block contenido %}
 <main class="contenedor">
   <div class="panel-izquierdo">
-    <div id="dashboard-principal" class="vista-principal dashboard-principal registro-container">
-
-      <!-- Saludo y saldo -->
-      <div class="encabezado">
-        <div class="usuario-saludo">
-          <img src="{{ url_for('static', filename='uploads/' ~ usuario_foto) }}"
-               alt="Foto de perfil"
-               class="foto-icono" />
-          <span>Hola, <strong>{{ usuario }}</strong></span>
+    <div class="contenedor-central">
+      <!-- Dashboard Principal -->
+      <div id="dashboard-principal" class="vista-principal dashboard-principal registro-container">
+        <div class="encabezado">
+          <div class="usuario-saludo">
+            <img src="{{ url_for('static', filename='uploads/' ~ usuario_foto) }}" alt="Foto de perfil" class="foto-icono" />
+            <span>Hola, <strong>{{ usuario }}</strong></span>
+          </div>
+          <div class="saldo-info">
+            <p>Saldo Actual</p>
+            <h2>${{ "{:,.2f}".format(saldo_actual) }}</h2>
+          </div>
         </div>
-        <div class="saldo-info">
-          <p>Saldo Actual</p>
-          <h2>${{ "{:,.2f}".format(saldo_actual) }}</h2>
+
+        <h3 class="titulo">¿Qué deseas registrar hoy?</h3>
+
+        <div class="ver-todos-container">
+          <a href="{{ url_for('movimientos', ver_todo=1) }}" class="btn-ver-todos">📋 Ver todos los movimientos</a>
         </div>
-      </div>
 
-      <!-- Título -->
-      <h3 class="titulo">¿Qué deseas registrar hoy?</h3>
+        <div class="tipo-selector tarjetas">
+          <button onclick="mostrarFormulario('ingreso')" class="tarjeta-btn">
+            <i class="fas fa-wallet icono-grande"></i><span>Ingreso</span>
+          </button>
+          <button onclick="mostrarFormulario('gasto')" class="tarjeta-btn">
+            <i class="fas fa-shopping-cart icono-grande"></i><span>Gasto</span>
+          </button>
+          <button onclick="mostrarFormulario('prestamo')" class="tarjeta-btn">
+            <i class="fas fa-hand-holding-usd icono-grande"></i><span>Préstamo</span>
+          </button>
+          <button onclick="mostrarFormulario('deuda')" class="tarjeta-btn">
+            <i class="fas fa-credit-card icono-grande"></i><span>Deuda</span>
+          </button>
+        </div>
 
-      <!-- Ver todos -->
-      <div class="ver-todos-container">
-        <a href="{{ url_for('movimientos', ver_todo=1) }}" class="btn-ver-todos">📋 Ver todos los movimientos</a>
-      </div>
-
-      <!-- Botones tipo movimiento -->
-      <div class="tipo-selector tarjetas">
-        <button onclick="mostrarFormulario('ingreso')" class="tarjeta-btn">
-          <i class="fas fa-wallet icono-grande"></i><span>Ingreso</span>
-        </button>
-        <button onclick="mostrarFormulario('gasto')" class="tarjeta-btn">
-          <i class="fas fa-shopping-cart icono-grande"></i><span>Gasto</span>
-        </button>
-        <button onclick="mostrarFormulario('prestamo')" class="tarjeta-btn">
-          <i class="fas fa-hand-holding-usd icono-grande"></i><span>Préstamo</span>
-        </button>
-        <button onclick="mostrarFormulario('deuda')" class="tarjeta-btn">
-          <i class="fas fa-credit-card icono-grande"></i><span>Deuda</span>
-        </button>
-      </div>
-
-      <!-- Entrada por voz -->
-      <div class="voz-entrada-container">
-        <button id="btn-voz" class="btn-voz" onclick="toggleReconocimientoVoz()">🎙️ <span class="ondas"></span></button>
-        <div id="burbuja-input" class="burbuja-input oculto">
-          <input type="text" id="textoReconocido" placeholder="Habla ahora..." readonly>
+        <div class="voz-entrada-container">
+          <button id="btn-voz" class="btn-voz" onclick="toggleReconocimientoVoz()">🎙️ <span class="ondas"></span></button>
+          <div id="burbuja-input" class="burbuja-input oculto">
+            <input type="text" id="textoReconocido" placeholder="Habla ahora..." readonly>
+          </div>
         </div>
       </div>
+
+      <!-- Formulario Ingreso/Gasto -->
+      <form method="POST" action="{{ url_for('movimientos') }}" id="form-movimiento">
+        <button type="button" class="btn-regresar" onclick="volverAlInicio()">← Regresar</button>
+        <input type="hidden" name="tipo" id="tipo">
+        <label>Fecha</label>
+        <input type="date" name="fecha" required id="fecha-mov">
+        <label>Frecuencia</label>
+        <select name="frecuencia">
+          <option value="una_vez">Una vez</option>
+          <option value="diario">Diario</option>
+          <option value="semanal">Semanal</option>
+          <option value="mensual">Mensual</option>
+        </select>
+        <label>Descripción</label>
+        <input type="text" name="descripcion" required id="descripcion-mov">
+        <label>Monto</label>
+        <input type="number" name="valor" step="0.01" required id="valor-mov">
+        <label>Categoría</label>
+        <div class="categorias-grid">
+          {% for categoria in categorias %}
+            <input type="radio" name="categoria_id" value="{{ categoria.id }}" id="cat{{ categoria.id }}" class="categoria-radio" required>
+            <label for="cat{{ categoria.id }}" class="categoria-tarjeta">
+              <i class="fa-solid {{ categoria.icono }}"></i><br>{{ categoria.nombre }}
+            </label>
+          {% endfor %}
+          <div class="categoria-tarjeta agregar-categoria" onclick="abrirModalCategoria()">
+            <i class="fas fa-plus"></i><br>Agregar categoría
+          </div>
+        </div>
+        <button type="submit" class="guardar-btn">✓ Guardar</button>
+      </form>
+
+      <!-- Formulario Préstamo -->
+      <form method="POST" action="{{ url_for('registrar_prestamo') }}" id="form-prestamo">
+        <button type="button" class="btn-regresar" onclick="volverAlInicio()">← Regresar</button>
+        <label>Fecha</label>
+        <input type="date" name="fecha" required id="fecha-prestamo">
+        <label>Frecuencia</label>
+        <select name="frecuencia" required>
+          <option value="una_vez">Una vez</option>
+          <option value="diario">Diario</option>
+          <option value="semanal">Semanal</option>
+          <option value="mensual">Mensual</option>
+        </select>
+        <label>Persona</label>
+        <input type="text" name="persona" required id="persona-prestamo">
+        <label>Descripción</label>
+        <input type="text" name="descripcion" required id="descripcion-prestamo">
+        <label>Monto</label>
+        <input type="number" name="valor" step="0.01" required id="valor-prestamo">
+        <button type="submit" class="guardar-btn">✓ Guardar</button>
+      </form>
+
+      <!-- Formulario Deuda -->
+      <form method="POST" action="{{ url_for('registrar_deuda') }}" id="form-deuda">
+        <button class="btn-regresar" onclick="volverAlInicio()">← Regresar</button>
+        <label>Fecha</label>
+        <input type="date" name="fecha" required id="fecha-deuda">
+        <label>Frecuencia</label>
+        <select name="frecuencia">
+          <option value="una_vez">Una vez</option>
+          <option value="diario">Diario</option>
+          <option value="semanal">Semanal</option>
+          <option value="mensual">Mensual</option>
+        </select>
+        <label>A quién le debes</label>
+        <input type="text" name="persona" required id="persona-deuda">
+        <label>Descripción</label>
+        <input type="text" name="descripcion" required id="descripcion-deuda">
+        <label>Monto</label>
+        <input type="number" name="valor" step="0.01" required id="valor-deuda">
+        <button type="submit" class="guardar-btn">✓ Guardar</button>
+      </form>
     </div>
-
-    <!-- Formulario Ingreso/Gasto -->
-    <form method="POST" action="{{ url_for('movimientos') }}" id="form-movimiento" style="display: none;">
-      <button type="button" class="btn-regresar" onclick="volverAlInicio()">← Regresar</button>
-      <input type="hidden" name="tipo" id="tipo">
-      <label>Fecha</label>
-      <input type="date" name="fecha" required id="fecha-mov">
-      <label>Frecuencia</label>
-      <select name="frecuencia">
-        <option value="una_vez">Una vez</option>
-        <option value="diario">Diario</option>
-        <option value="semanal">Semanal</option>
-        <option value="mensual">Mensual</option>
-      </select>
-      <label>Descripción</label>
-      <input type="text" name="descripcion" placeholder="Ej: Pago de salario, almuerzo..." required id="descripcion-mov">
-      <label>Monto</label>
-      <input type="number" name="valor" step="0.01" placeholder="Ej: 25000" required id="valor-mov">
-      <label>Categoría</label>
-      <div class="categorias-grid">
-        {% for categoria in categorias %}
-          <input type="radio" name="categoria_id" value="{{ categoria.id }}" id="cat{{ categoria.id }}" class="categoria-radio" required>
-          <label for="cat{{ categoria.id }}" class="categoria-tarjeta">
-            <i class="fa-solid {{ categoria.icono }}"></i><br>
-            {{ categoria.nombre }}
-          </label>
-        {% endfor %}
-        <div class="categoria-tarjeta agregar-categoria" onclick="abrirModalCategoria()">
-          <i class="fas fa-plus"></i><br>
-          Agregar categoría
-        </div>
-      </div>
-      <button type="submit" class="guardar-btn">✓ Guardar</button>
-    </form>
-
-    <!-- Formulario Préstamo -->
-    <form method="POST" action="{{ url_for('registrar_prestamo') }}" id="form-prestamo" style="display: none;">
-      <button type="button" class="btn-regresar" onclick="volverAlInicio()">← Regresar</button>
-      <label>Fecha</label>
-      <input type="date" name="fecha" required id="fecha-prestamo">
-      <label>Frecuencia</label>
-      <select name="frecuencia" required>
-        <option value="una_vez">Una vez</option>
-        <option value="diario">Diario</option>
-        <option value="semanal">Semanal</option>
-        <option value="mensual">Mensual</option>
-      </select>
-      <label>Persona</label>
-      <input type="text" name="persona" placeholder="¿A quién le prestaste?" required id="persona-prestamo">
-      <label>Descripción</label>
-      <input type="text" name="descripcion" placeholder="Ej: Préstamo a Juan" required id="descripcion-prestamo">
-      <label>Monto</label>
-      <input type="number" name="valor" step="0.01" placeholder="Ej: 25000" required id="valor-prestamo">
-      <button type="submit" class="guardar-btn">✓ Guardar</button>
-    </form>
-
-    <!-- Formulario Deuda -->
-    <form method="POST" action="{{ url_for('registrar_deuda') }}" id="form-deuda" style="display: none;">
-      <button type="button" class="btn-regresar" onclick="volverAlInicio()">← Regresar</button>
-      <label>Fecha</label>
-      <input type="date" name="fecha" required id="fecha-deuda">
-      <label>Frecuencia</label>
-      <select name="frecuencia">
-        <option value="una_vez">Una vez</option>
-        <option value="diario">Diario</option>
-        <option value="semanal">Semanal</option>
-        <option value="mensual">Mensual</option>
-      </select>
-      <label>A quién le debes</label>
-      <input type="text" name="persona" placeholder="Ej: Deuda con Banco X" required id="persona-deuda">
-      <label>Descripción</label>
-      <input type="text" name="descripcion" placeholder="Ej: Préstamo del banco" required id="descripcion-deuda">
-      <label>Monto</label>
-      <input type="number" name="valor" step="0.01" placeholder="Ej: 50000" required id="valor-deuda">
-      <button type="submit" class="guardar-btn">✓ Guardar</button>
-    </form>
   </div>
 </main>
 
@@ -177,42 +174,33 @@
 <!-- SCRIPT para mostrar formularios -->
 <script>
   function mostrarFormulario(tipo) {
-    const dashboard = document.getElementById('dashboard-principal');
-    if (dashboard) dashboard.style.display = 'none';
+    console.log("Mostrando formulario: ", tipo);  // <-- para debug
 
-    const forms = {
-      'ingreso': 'form-movimiento',
-      'gasto': 'form-movimiento',
-      'prestamo': 'form-prestamo',
-      'deuda': 'form-deuda'
-    };
+    document.querySelectorAll("#dashboard-principal, #form-movimiento, #form-prestamo, #form-deuda")
+      .forEach(el => el.classList.remove("mostrar"));
 
-    Object.values(forms).forEach(id => {
-      const form = document.getElementById(id);
-      if (form) form.style.display = 'none';
-    });
-
-    const formToShow = forms[tipo];
-    if (formToShow) {
-      const form = document.getElementById(formToShow);
-      if (form) form.style.display = 'block';
-
-      if (tipo === 'ingreso' || tipo === 'gasto') {
-        const tipoInput = document.getElementById('tipo');
-        if (tipoInput) tipoInput.value = tipo;
-      }
+    if (tipo === "ingreso" || tipo === "gasto") {
+      document.getElementById("form-movimiento").classList.add("mostrar");
+      document.getElementById("tipo").value = tipo;
+    } else {
+      document.getElementById("form-" + tipo).classList.add("mostrar");
     }
   }
 
-  function volverAlInicio() {
-    const dashboard = document.getElementById('dashboard-principal');
-    if (dashboard) dashboard.style.display = 'block';
 
-    ['form-movimiento', 'form-prestamo', 'form-deuda'].forEach(id => {
-      const form = document.getElementById(id);
-      if (form) form.style.display = 'none';
-    });
+  function volverAlInicio() {
+    // Oculta todos los formularios
+    document.querySelectorAll("#form-movimiento, #form-prestamo, #form-deuda")
+      .forEach(el => el.classList.remove("mostrar"));
+
+    // Muestra el dashboard
+    document.getElementById("dashboard-principal").classList.add("mostrar");
   }
+
+  // Asegúrate de que solo el dashboard esté visible al cargar
+  document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("dashboard-principal").classList.add("mostrar");
+  });
 </script>
 
 {% endblock %}

@@ -1,0 +1,292 @@
+/* Contenedor principal de toda la app */
+.contenedor {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 90vh;
+  padding: 3vh;
+  gap: 3vh;
+  overflow: hidden;
+}
+.panel-izquierdo {
+  flex: 0 0 38%;             /* Antes: 30% */
+  max-width: 700px;          /* Antes: 650px */
+  min-width: 500px;          /* Antes: 550px (lo reducimos para mayor responsividad) */
+  background: #111;
+  color: #f5f5f5;
+  padding: 2rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Panel de contenido central (dashboard/formularios) */
+.contenedor-central {
+  position: relative;
+  flex: 1;                    /* 🔄 Usa todo el espacio restante */
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;          /* 🧼 No scroll */
+  background-color: #000;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;    /* 🧩 Para organizar el contenido interno */
+}
+
+
+/* Posiciona solo uno de los formularios o dashboard en pantalla */
+.contenedor-central > * {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Formularios y dashboard ocultos por defecto */
+#dashboard-principal,
+#form-movimiento,
+#form-prestamo,
+#form-deuda {
+  display: none;
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 1rem;
+  color: black;
+  z-index: 10;
+  height: 100%;
+  overflow: auto;             /* Permite scroll interno si hace falta */
+}
+
+/* Solo se muestra el que tiene clase "mostrar" */
+#dashboard-principal.mostrar,
+#form-movimiento.mostrar,
+#form-prestamo.mostrar,
+#form-deuda.mostrar {
+  display: block;
+}
+
+
+/* Bienvenida y usuario */
+.usuario-saludo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+}
+.usuario-saludo i {
+  font-size: 2rem;
+  color: white;
+}
+.foto-icono {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+/* Información del saldo */
+.saldo-info {
+  margin-top: 1rem;
+  text-align: center;
+}
+.saldo-info p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+.saldo-info h2 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+/* Título secciones */
+.titulo {
+  text-align: center;
+  margin: 2rem 0 1rem;
+  font-size: 1.3rem;
+  color: white;
+}
+
+/* Selector de tipo (botones de tarjeta) */
+.tipo-selector {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+
+.tarjeta-btn {
+  width: 70px;
+  height: 70px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 50%;           /* 🔵 Hace que sea completamente redondo */
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;            /* Ícono más visible */
+  cursor: pointer;
+  transition: background 0.3s ease;
+  flex-shrink: 0;               /* ❌ No se reduce si falta espacio */
+}
+.tarjeta-btn:hover {
+  background: #2a2a2a;
+}
+
+
+.icono-grande {
+  font-size: .5rem;
+  margin-bottom: 0.4rem;
+}
+
+/* Botón ver todos */
+.ver-todos-container {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.btn-ver-todos {
+  background: #fff;
+  color: #000;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  font-weight: bold;
+  text-decoration: none;
+  display: inline-block;
+  transition: background 0.3s;
+}
+.btn-ver-todos:hover {
+  background: #e5e5e5;
+}
+
+/* Formularios */
+form label {
+  display: block;
+  margin-bottom: 0.3rem;
+  margin-top: 1rem;
+}
+form input,
+form select {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 0.6rem;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+/* Selector de categorías (grid de tarjetas) */
+.categorias-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+.categoria-tarjeta {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  padding: 1rem;
+  border-radius: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  color: white;
+}
+.categoria-tarjeta:hover,
+.categoria-radio:checked + .categoria-tarjeta {
+  background: #2a2a2a;
+}
+.categoria-radio {
+  display: none;
+}
+
+/* Botones generales */
+.guardar-btn {
+  background: white;
+  color: black;
+  padding: 0.7rem 1.2rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  margin-top: 1rem;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.guardar-btn:hover {
+  background: #e5e5e5;
+}
+.btn-regresar {
+  background: none;
+  border: none;
+  color: #007bff;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  display: block;
+  text-align: left;
+  padding: 0;
+}
+.btn-regresar:hover {
+  text-decoration: underline;
+}
+
+/* Voz e input */
+.voz-entrada-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 2rem;
+}
+.btn-voz {
+  background: #333;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  padding: 1rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+.burbuja-input input {
+  margin-top: 0.8rem;
+  padding: 0.6rem;
+  width: 100%;
+  border-radius: 8px;
+  border: none;
+  background: #fff;
+  color: #000;
+}
+
+/* Clases de utilidad */
+.oculto {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .contenedor {
+    flex-direction: column;
+  }
+
+  .panel-izquierdo {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .contenedor-central {
+    height: auto;
+    min-height: 400px;
+  }
+
+  .tipo-selector {
+    flex-direction: column;
+  }
+
+  .tarjeta-btn {
+    flex: 1 1 100%;
+  }
+}
