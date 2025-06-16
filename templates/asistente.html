@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block titulo %}Asistente Visual{% endblock %}
+
+{% block contenido %}
+<main class="app-content">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+
+    .contenedor {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 30px;
+      border: 1px solid #FFC;
+      border-radius: 5px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      margin-top: 80px;
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      font-size: 16px;
+      padding: 10px;
+      border: 1px solid #FFC;
+      border-radius: 5px;
+    }
+
+    input[type="file"] {
+      margin-top: 10px;
+    }
+
+    #imagenPrevioContainer {
+      display: none;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      margin-top: 10px;
+    }
+
+    button, input[type="submit"] {
+      cursor: pointer;
+      background-color: #3498db;
+      color: #fff;
+      padding: 10px 20px;
+      border: 1px solid #3498db;
+      border-radius: 5px;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    button:hover, input[type="submit"]:hover {
+      background-color: #2980b9;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+    }
+
+    pre {
+      background-color: #faf6f3;
+      padding: 10px;
+      border: 1px solid rgb(248, 248, 243);
+      border-radius: 5px;
+      font-size: 16px;
+      margin-top: 10px;
+      white-space: pre-wrap;
+      overflow: auto;
+    }
+  </style>
+
+  <div class="contenedor">
+    <h1>Formulario de Consulta a Cimbrados</h1>
+    <form id="formulario1" enctype="multipart/form-data">
+      <div>
+        <input type="file" id="imagen" name="imagen" accept="image/*">
+      </div>
+      <div id="imagenPrevioContainer">
+        <pre>
+          <img id="imagenPrevio" src="" alt="Vista previa de la imagen">
+        </pre>
+      </div>
+
+      <div>
+        <h2>Ingrese su consulta sobre la imagen</h2>
+        <textarea id="consulta" name="consulta"></textarea>
+      </div>
+      <input type="submit" value="Consultar">
+      <pre id="resultado"></pre>
+    </form>
+  </div>
+
+  <script>
+    // Mostrar vista previa de la imagen
+    document.getElementById('imagen').addEventListener('change', function (event) {
+      const imagen = event.target.files[0];
+      if (imagen) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const imgPreview = document.getElementById('imagenPrevio');
+          imgPreview.src = e.target.result;
+          document.getElementById('imagenPrevioContainer').style.display = 'block';
+        };
+        reader.readAsDataURL(imagen);
+      }
+    });
+
+    // Enviar formulario con Fetch
+    document.getElementById('formulario1').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const formData = new FormData();
+      const imagen = document.getElementById('imagen').files[0];
+      const consulta = document.getElementById('consulta').value;
+
+      formData.append('imagen', imagen);
+      formData.append('consulta', consulta);
+
+      try {
+        const response = await fetch('/consultar', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+        document.getElementById('resultado').textContent = data.mensaje || 'Sin respuesta.';
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('resultado').textContent = 'Ocurrió un error al procesar la consulta.';
+      }
+    });
+  </script>
+</main>
+{% endblock %}

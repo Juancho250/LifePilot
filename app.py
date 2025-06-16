@@ -8,11 +8,17 @@ from decimal import Decimal
 from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from google.generativeai import GenerativeModel, configure
+from flask import current_app as app
+from PIL import Image
+import base64
+import mimetypes
+import google.generativeai as genai
 import pymysql
 import base64
 import MySQLdb.cursors
 import MySQLdb
-
+import asyncio
 
 import os
 
@@ -29,6 +35,13 @@ app.config['MYSQL_PORT'] = int(os.environ.get("MYSQLPORT") or os.environ.get("DB
 # Inicializar MySQL
 mysql = MySQL(app)
 
+API_KEY_GEMINI = "AIzaSyDGCXwlcMTPtdBOKHwszEuuV4cFh-mfc18"
+
+# Configurar la clave para Gemini
+genai.configure(api_key="TU_API_KEY_AQUÍ")  # 🔒 reemplázala por tu clave real
+
+# Instanciar el modelo
+modelo = genai.GenerativeModel("gemini-1.5-flash")  
 
 # Filtro personalizado para escapar texto en JavaScript
 def escapejs_filter(value):
@@ -715,13 +728,42 @@ def editar_idea(id):
     idea = cursor.fetchone()
     return render_template("editar_idea.html", idea=idea)
 
-@app.route('/tarjeta', methods=['GET'])
-def mostrar_tarjeta():
-    if 'logueado' not in session:
-        return redirect(url_for('iniciar_sesion'))
-    
-    return render_template('tarjeta.html')
 
+
+#este es el asistente virtual
+@app.route('/asistente', methods=['GET'], endpoint='asistente')
+def mostrar_asistente():
+    return render_template('asistente.html')
+
+
+@app.route('/consultar', methods=['POST'])
+def consultar():
+    consulta = request.form.get('consulta', '')
+    imagen = request.files.get('imagen', None)
+
+    try:
+        if imagen:
+            contenido = base64.b64encode(imagen.read()).decode("utf-8")
+            tipo = imagen.mimetype.split("/")[-1]
+            if tipo == "jpg":
+                tipo = "jpeg"
+
+            imagen_codificada = {
+                "inlineData": {
+                    "mimeType": f"image/{tipo}",
+                    "data": contenido
+                }
+            }
+
+            respuesta = asyncio.run(modelo.generate_content([consulta, imagen_codificada]))
+        else:
+            respuesta = asyncio.run(modelo.generate_content(consulta))
+
+        texto_respuesta = respuesta.text if hasattr(respuesta, 'text') else "No se obtuvo respuesta."
+        return jsonify({"mensaje": texto_respuesta})
+
+    except Exception as e:
+        return jsonify({"mensaje": f"❌ Error: {str(e)}"})
 
 
 if __name__ == '__main__':
