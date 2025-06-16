@@ -422,6 +422,7 @@ def movimientos():
         # Consultar préstamos (si aplica)
         # --------------------------------------------------------------------
         prestamos = []
+        movimientos_agrupados = {}
         if seccion == 'prestamos':
             ordenes_prestamos = {
                 'fecha_desc': 'fecha DESC',
@@ -440,21 +441,25 @@ def movimientos():
             """, (usuario_id, fecha_desde, fecha_hasta))
             prestamos = cursor.fetchall()
 
+        deudas = []  # Inicializa aunque sea vacío
+
         return render_template(
             'movimientos.html',
-            movimientos_agrupados=movimientos_agrupados,
+            movimientos_agrupados=movimientos_agrupados,  # <- ahora siempre está definido
             saldo_actual=saldo_actual,
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta,
             ordenar=ordenar,
             categorias=categorias,
             prestamos=prestamos,
+            deudas=deudas,
             seccion=seccion,
             dia_actual=dia_param,
             usuario=session.get('usuario'),
-            usuario_foto=usuario_foto,  # 👈 Esto
+            usuario_foto=usuario_foto,
             mostrar_todo=mostrar_todo
         )
+
 
 
     finally:
@@ -638,6 +643,11 @@ def exportar_pdf():
                      as_attachment=True,
                      download_name='movimientos_filtrados.pdf',
                      mimetype='application/pdf')
+
+
+@app.route('/registros')
+def registros():
+    return render_template('registros.html')
 
 
 
