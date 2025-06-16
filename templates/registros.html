@@ -1,11 +1,231 @@
 {% extends "base.html" %}
+
 {% block titulo %}Tus registros{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gestion_registros.css') }}">
+{% endblock %}
 
 {% block contenido %}
 
 
+  <main>
+    <form method="GET" class="filtros-form">
+      <label>Desde:
+        <input type="date" name="fecha_desde" value="{{ request.args.get('fecha_desde', '') }}">
+      </label>
+      <label>Hasta:
+        <input type="date" name="fecha_hasta" value="{{ request.args.get('fecha_hasta', '') }}">
+      </label>
+      <input type="hidden" name="seccion" value="{{ request.args.get('seccion', 'deudas') }}">
+      <label>Ordenar por:
+        <select name="ordenar">
+          <option value="fecha_desc" {% if request.args.get('ordenar') == 'fecha_desc' %}selected{% endif %}>Fecha (desc)</option>
+          <option value="fecha_asc" {% if request.args.get('ordenar') == 'fecha_asc' %}selected{% endif %}>Fecha (asc)</option>
+          <option value="valor_desc" {% if request.args.get('ordenar') == 'valor_desc' %}selected{% endif %}>Valor (mayor a menor)</option>
+          <option value="valor_asc" {% if request.args.get('ordenar') == 'valor_asc' %}selected{% endif %}>Valor (menor a mayor)</option>
+        </select>
+      </label>
+
+      <button type="submit" formaction="{{ url_for('movimientos') }}">Filtrar</button>
+      <button type="submit" formaction="{{ url_for('exportar_pdf') }}">Exportar a PDF</button>
+    </form>
+
+    <!-- botones de secciones -->
+    <div>
+      <button type="button" id="btnIngresos" class="boton-seccion {% if seccion == 'ingresos' %}activo{% endif %}" onclick="cambiarSeccion('ingresos')">
+        Ingresos y gastos
+      </button>
+      <button type="button" id="btnDeudas" class="boton-seccion {% if seccion == 'deudas' %}activo{% endif %}" onclick="cambiarSeccion('deudas')">
+        Deudas
+      </button>
+      <button type="button" id="btnPrestamos" class="boton-seccion {% if seccion == 'prestamos' %}activo{% endif %}" onclick="cambiarSeccion('prestamos')">
+        Préstamos
+      </button>
+    </div>
+
+    <!-- Sección Ingresos y Gastos -->
+    <div id="seccionIngresos" class="seccion {% if seccion == 'ingresos' %}activa{% endif %}">
+      <div class="tabla-responsive">
+        <table class="tabla-movimientos">
+          <tbody>
+            {% set contador = 0 %}
+            {% for fecha_legible, items in movimientos_agrupados.items() %}
+              {% if not mostrar_todo and contador >= 1 %}
+                <tr>
+                  <td colspan="3" style="text-align:center;">
+                    <a href="{{ url_for('movimientos', ver_todo=1) }}">Ver más movimientos</a>
+                  </td>
+                </tr>
+                {# Aquí no usamos break, simplemente omitimos mostrar más filas #}
+              {% else %}
+                <tr>
+                  <td colspan="3"><strong>{{ fecha_legible }}</strong></td>
+                </tr>
+                {% for item in items %}
+                  <tr class="fila-modal-detalles"
+                      data-fecha="{{ item.fecha }}"
+                      data-tipo="{{ item.tipo }}"
+                      data-estado="{{ item.estado if item.estado else 'desconocido' }}"
+                      data-valor="{{ '%.2f'|format(item.valor) }}"
+                      data-descripcion="{{ item.descripcion }}">
+                    <td>{{ item.fecha }}</td>
+                    <td class="{% if item.tipo == 'ingreso' %}tipo-ingreso{% else %}tipo-gasto{% endif %}">
+                      {{ item.tipo|capitalize }}
+                    </td>
+                    <td>${{ '%.2f'|format(item.valor) }}</td>
+                  </tr>
+                {% endfor %}
+                {% set contador = contador + 1 %}
+              {% endif %}
+            {% endfor %}
+            {# Si no mostrás todo y hay más de un grupo, el link aparecerá después del primer grupo #}
+            {% if not mostrar_todo and movimientos_agrupados|length > 1 %}
+              <tr>
+                <td colspan="3" style="text-align:center;">
+                  <a href="{{ url_for('registros', ver_todo=1) }}">Ver más movimientos</a>
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sección Deudas -->
+    <div id="seccionDeudas" class="seccion {% if seccion == 'deudas' %}activa{% endif %}">
+      <div class="tabla-responsive">
+        <table class="tabla-movimientos">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Descripción</th>
+              <th>Valor</th>
+              <th>Tipo</th>
+              <th>Saldo Pendiente</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in deudas if item.tipo in ['deuda', 'abono_deuda'] %}
+              <tr class="fila-modal-detalles"
+                  data-fecha="{{ item.fecha }}"
+                  data-descripcion="{{ item.descripcion }}"
+                  data-valor="{{ '%.2f'|format(item.monto_inicial if item.monto_inicial is defined else 0) }}"
+                  data-tipo="{{ item.tipo }}"
+                  data-saldo="{{ '%.2f'|format(item.saldo if item.saldo is defined else 0) }}"
+                  data-estado="{{ item.estado if item.estado else 'desconocido' }}">
+                <td>{{ item.fecha }}</td>
+                <td>{{ item.descripcion }}</td>
+                <td>
+                  {% if item.monto_inicial is defined %}
+                    ${{ "%.2f"|format(item.monto_inicial) }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td class="tipo-{{ item.tipo }}">
+                  {{ item.tipo|replace('_', ' ')|capitalize }}
+                </td>
+                <td>
+                  {% if item.saldo is defined and item.saldo is not none %}
+                    ${{ "%.2f"|format(item.saldo) }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sección Préstamos -->
+    <div id="seccionPrestamos" class="seccion {% if seccion == 'prestamos' %}activa{% endif %}">
+      <div class="tabla-responsive">
+        <table class="tabla-movimientos">
+          <tbody>
+            {% set contador = 0 %}
+            {% for fecha_legible, items in prestamos_agrupados.items() %}
+              {% if not mostrar_todo and contador >= 1 %}
+                <tr>
+                  <td colspan="3" style="text-align:center;">
+                    <a href="{{ url_for('registros', ver_todo=1) }}">Ver más préstamos</a>
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="3"><strong>{{ fecha_legible }}</strong></td>
+                </tr>
+                {% for prestamo in items %}
+                  <tr class="fila-modal-detalles"
+                      data-id="{{ prestamo.id }}"
+                      data-fecha="{{ prestamo.fecha }}"
+                      data-descripcion="{{ prestamo.descripcion }}"
+                      data-monto_inicial="{{ '%.2f'|format(prestamo.monto_inicial) }}"
+                      data-estado="{{ prestamo.estado }}"
+                      data-saldo="{{ '%.2f'|format(prestamo.saldo) }}">
+                    <td>{{ prestamo.descripcion }}</td>
+                    <td class="{% if prestamo.estado == 'pendiente' %}estado-pendiente
+                                {% elif prestamo.estado == 'pagado' %}estado-pagado
+                                {% elif prestamo.estado == 'vencido' %}estado-vencido
+                                {% else %}estado-otro{% endif %}">
+                      {{ prestamo.estado|capitalize }}
+                    </td>
+                    <td>
+                      {% if prestamo.saldo > 0 %}
+                        <button type="button" onclick="event.stopPropagation(); abrirModalAbono({{ prestamo.id }}, {{ prestamo.saldo }})">Abonar</button>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+                {% set contador = contador + 1 %}
+              {% endif %}
+            {% endfor %}
+            {% if not mostrar_todo and prestamos_agrupados|length > 1 %}
+              <tr>
+                <td colspan="3" style="text-align:center;">
+                  <a href="{{ url_for('registros', ver_todo=1) }}">Ver más préstamos</a>
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
 
 
+<!-- Modal Abono -->
+<div id="modalAbono" class="modal">
+  <div class="modal-contenido">
+    <form method="POST" action="{{ url_for('abonar_prestamo') }}">
+      <input type="hidden" name="prestamo_id" id="abonoPrestamoId">
+      
+      <label>Monto a abonar:</label>
+      <input type="number" step="0.01" name="monto_abono" required>
+      
+      <p>Saldo pendiente: $<span id="saldoPendienteModal"></span></p>
+      
+      <button type="submit">Confirmar abono</button>
+      <button type="button" onclick="cerrarModalAbono()">Cancelar</button>
+    </form>
+  </div>
+</div>
+
+  <!-- Modal Detalles -->
+  <div id="modal-detalles" class="modal-detalles" aria-hidden="true" role="dialog" aria-labelledby="modal-detalles-titulo">
+    <div class="modal-detalles-contenido">
+      <button class="modal-detalles-cerrar" aria-label="Cerrar modal" onclick="cerrarModalDetalles()">&times;</button>
+      <h2 id="modal-detalles-titulo">Detalles</h2>
+      <div id="modal-detalles-contenido-info"></div>
+    </div>
+  </div>
+
+{% endblock %}
 
 
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/registros.js') }}"></script>
 {% endblock %}

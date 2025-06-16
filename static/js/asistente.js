@@ -1,67 +1,55 @@
-      function mostrarImagen() {
-        const imagenInput = document.querySelector("#imagen");
-        const imagenPrevioContainer = document.querySelector("#imagenPrevioContainer");
-        const imagenPrevio = document.querySelector("#imagenPrevio");
-        const consultaTextarea = document.querySelector("#consulta");
-        const resultadoPre = document.querySelector("#resultado");
+const chat = document.getElementById('chat');
+
+function agregarMensaje(texto, clase) {
+  const mensaje = document.createElement('div');
+  mensaje.className = `mensaje ${clase}`;
+  const burbuja = document.createElement('div');
+  burbuja.className = 'burbuja';
+  burbuja.textContent = texto;
+  mensaje.appendChild(burbuja);
+  chat.appendChild(mensaje);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+document.getElementById('imagen').addEventListener('change', function (event) {
+  const imagen = event.target.files[0];
+  if (imagen) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const imgPreview = document.getElementById('imagenPrevio');
+      imgPreview.src = e.target.result;
+      document.getElementById('imagenPrevioContainer').style.display = 'block';
+    };
+    reader.readAsDataURL(imagen);
+  }
+});
+
+document.getElementById('formulario1').addEventListener('submit', async function (e) 
+{
+  e.preventDefault();
+  const consulta = document.getElementById('consulta').value.trim();
   
-        if (imagenInput.files && imagenInput.files[0]) {
-          const reader = new FileReader();
+  if (!consulta) return;
+  const formData = new FormData();
+  const imagen = document.getElementById('imagen').files[0];
+  formData.append('imagen', imagen);
+  formData.append('consulta', consulta);
+  agregarMensaje(consulta, 'usuario');
+
+  try {
+    const response = await fetch('/consultar', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await response.json();
+    agregarMensaje(data.mensaje || 'Sin respuesta.', 'asistente');
+  } 
   
-          reader.onload = function (e) {
-            imagenPrevio.src = e.target.result;
-            // Mostrar el div de la imagen cuando se selecciona una imagen
-            imagenPrevioContainer.style.display = "block";
-            // Borrar el contenido del textarea y del resultado
-            consultaTextarea.value = "";
-            resultadoPre.innerHTML = "";
-          };
-  
-          reader.readAsDataURL(imagenInput.files[0]);
-        } else {
-          // Ocultar el div de la imagen cuando no se selecciona una imagen
-          imagenPrevioContainer.style.display = "none";
-        }
-      }
-  
-      const formulario1 = document.querySelector("#formulario1");
-      document.querySelector("#imagen").addEventListener("change", () => {
-        mostrarImagen()
-      })
-  
-      function escaparCaracteresHTML(texto) {
-        return texto.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      }
-  
-  
-      formulario1.addEventListener("submit", evento => {
-        evento.preventDefault();
-  
-        const consulta = document.querySelector("#consulta").value.trim();
-        const imagenInput = document.querySelector("#imagen");
-        const imagen = imagenInput.files[0];
-  
-        const botonConsultar = document.querySelector("input[type='submit']");
-        botonConsultar.disabled = true;
-        botonConsultar.value = "Espere, por favor...";
-  
-        const datosFormulario = new FormData();
-        datosFormulario.append("consulta", consulta);
-        datosFormulario.append("imagen", imagen);
-  
-        fetch("consultar", {
-          method: 'POST',
-          body: datosFormulario
-        }).then(respuesta => respuesta.json())
-          .then(respuesta => {
-            document.querySelector("#resultado").innerHTML = `${escaparCaracteresHTML(respuesta.mensaje)}<br>`;
-            botonConsultar.disabled = false;
-            botonConsultar.value = "Consultar";
-          })
-          .catch(error => {
-            console.error('Error en la solicitud fetch:', error);
-            botonConsultar.disabled = false;
-            botonConsultar.value = "Consultar";
-          });
-      });
-    
+  catch (error) {
+    console.error('Error:', error);
+    agregarMensaje('❌ Error al procesar la consulta.', 'asistente');
+  }
+
+  document.getElementById('consulta').value = '';
+});

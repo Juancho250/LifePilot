@@ -130,28 +130,6 @@
   </div>
 </main>
 
-<!-- Modal Abono -->
-<div id="modalAbono" class="modal">
-  <div class="modal-contenido">
-    <form method="POST" action="{{ url_for('abonar_prestamo') }}">
-      <input type="hidden" name="prestamo_id" id="abonoPrestamoId">
-      <label>Monto a abonar:</label>
-      <input type="number" step="0.01" name="monto_abono" required>
-      <p>Saldo pendiente: $<span id="saldoPendienteModal"></span></p>
-      <button type="submit">Confirmar abono</button>
-      <button type="button" onclick="cerrarModalAbono()">Cancelar</button>
-    </form>
-  </div>
-</div>
-
-<!-- Modal Detalles -->
-<div id="modal-detalles" class="modal-detalles" aria-hidden="true" role="dialog" aria-labelledby="modal-detalles-titulo">
-  <div class="modal-detalles-contenido">
-    <button class="modal-detalles-cerrar" aria-label="Cerrar modal" onclick="cerrarModalDetalles()">&times;</button>
-    <h2 id="modal-detalles-titulo">Detalles</h2>
-    <div id="modal-detalles-contenido-info"></div>
-  </div>
-</div>
 
 <!-- Modal Crear Categoría -->
 <div id="modalCategoria" class="modal-categoria">
@@ -171,37 +149,10 @@
   </div>
 </div>
 
-<!-- SCRIPT para mostrar formularios -->
-<script>
-  function mostrarFormulario(tipo) {
-    console.log("Mostrando formulario: ", tipo);  // <-- para debug
-
-    document.querySelectorAll("#dashboard-principal, #form-movimiento, #form-prestamo, #form-deuda")
-      .forEach(el => el.classList.remove("mostrar"));
-
-    if (tipo === "ingreso" || tipo === "gasto") {
-      document.getElementById("form-movimiento").classList.add("mostrar");
-      document.getElementById("tipo").value = tipo;
-    } else {
-      document.getElementById("form-" + tipo).classList.add("mostrar");
-    }
-  }
-
-
-  function volverAlInicio() {
-    // Oculta todos los formularios
-    document.querySelectorAll("#form-movimiento, #form-prestamo, #form-deuda")
-      .forEach(el => el.classList.remove("mostrar"));
-
-    // Muestra el dashboard
-    document.getElementById("dashboard-principal").classList.add("mostrar");
-  }
-
-  // Asegúrate de que solo el dashboard esté visible al cargar
-  document.addEventListener("DOMContentLoaded", function () {
-    document.getElementById("dashboard-principal").classList.add("mostrar");
-  });
-</script>
 
 {% endblock %}
 
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/movimientos.js') }}"></script>
+{% endblock %}

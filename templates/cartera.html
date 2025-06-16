@@ -4,7 +4,6 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/gestion_cartera.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='js/tarjeta.js') }}">
 {% endblock %}
 
 
@@ -140,4 +139,8 @@
     <script src='https://cdnjs.cloudflare.com/ajax/libs/imask/3.4.0/imask.min.js'></script><script  src="./script.js"></script>
 </main>
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/cartera.js') }}"></script>
 {% endblock %}

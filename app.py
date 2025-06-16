@@ -38,7 +38,7 @@ mysql = MySQL(app)
 API_KEY_GEMINI = "AIzaSyDGCXwlcMTPtdBOKHwszEuuV4cFh-mfc18"
 
 # Configurar la clave para Gemini
-genai.configure(api_key="TU_API_KEY_AQUÍ")  # 🔒 reemplázala por tu clave real
+genai.configure(api_key="AIzaSyDGCXwlcMTPtdBOKHwszEuuV4cFh-mfc18")  # 🔒 reemplázala por tu clave real
 
 # Instanciar el modelo
 modelo = genai.GenerativeModel("gemini-1.5-flash")  
@@ -285,7 +285,6 @@ def obtener_movimientos_mes_actual(usuario_id):
     finally:
         cursor.close()
 
-# Función para formatear fechas en formato legible
 def formatear_fecha_humana(fecha_str):
     hoy = date.today()
     fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
@@ -294,8 +293,10 @@ def formatear_fecha_humana(fecha_str):
         return "Hoy"
     elif fecha_obj == hoy - timedelta(days=1):
         return "Ayer"
+    elif 0 < (hoy - fecha_obj).days < 7:
+        return fecha_obj.strftime("%A").capitalize()  # Ej: "Lunes"
     else:
-        return fecha_obj.strftime("%d/%m/%Y")
+        return fecha_obj.strftime("%d/%m/%Y")  # Ej: "15/06/2025"
 
 
 
@@ -308,19 +309,13 @@ def movimientos():
     usuario_id = session['usuario_id']
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
-    
-
     try:
-
-        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-
         # 📸 Consultar la foto del usuario
         cursor.execute('SELECT foto FROM usuarios WHERE id = %s', (usuario_id,))
         resultado_foto = cursor.fetchone()
         usuario_foto = resultado_foto['foto'] if resultado_foto and resultado_foto['foto'] else None
-        # --------------------------------------------------------------------
+
         # POST: Registrar ingreso o gasto
-        # --------------------------------------------------------------------
         if request.method == 'POST':
             fecha = request.form['fecha']
             descripcion = request.form['descripcion']
@@ -339,79 +334,7 @@ def movimientos():
             mysql.connection.commit()
             return redirect(url_for('movimientos'))
 
-        # --------------------------------------------------------------------
-        # Filtros de fecha
-        # --------------------------------------------------------------------
-        hoy_date = datetime.today().date()
-        primer_dia = hoy_date.replace(day=1).strftime('%Y-%m-%d')
-        hoy_str = hoy_date.strftime('%Y-%m-%d')
-
-        dia_param = request.args.get('dia', '').lower()
-        dias_disponibles = {
-            'hoy': hoy_date,
-            'ayer': hoy_date - timedelta(days=1),
-            'lunes': hoy_date - timedelta(days=hoy_date.weekday()),
-            'martes': hoy_date - timedelta(days=hoy_date.weekday() - 1),
-            'miércoles': hoy_date - timedelta(days=hoy_date.weekday() - 2),
-            'jueves': hoy_date - timedelta(days=hoy_date.weekday() - 3),
-            'viernes': hoy_date - timedelta(days=hoy_date.weekday() - 4),
-            'sábado': hoy_date - timedelta(days=hoy_date.weekday() - 5),
-            'domingo': hoy_date - timedelta(days=hoy_date.weekday() - 6),
-        }
-
-        if dia_param in dias_disponibles:
-            fecha_desde = fecha_hasta = dias_disponibles[dia_param].strftime('%Y-%m-%d')
-        else:
-            fecha_desde = request.args.get('fecha_desde') or primer_dia
-            fecha_hasta = request.args.get('fecha_hasta') or hoy_str
-
-        # --------------------------------------------------------------------
-        # Ordenamiento
-        # --------------------------------------------------------------------
-        ordenar = request.args.get('ordenar', 'fecha_desc')
-        seccion = request.args.get('seccion', 'movimientos')
-
-        ordenes = {
-            'fecha_desc': 'm.fecha DESC',
-            'fecha_asc': 'm.fecha ASC',
-            'valor_desc': 'm.valor DESC',
-            'valor_asc': 'm.valor ASC',
-        }
-        orden_sql = ordenes.get(ordenar, 'm.fecha DESC')
-
-        # --------------------------------------------------------------------
-        # Consultar movimientos con categoría
-        # --------------------------------------------------------------------
-        cursor.execute(f"""
-            SELECT m.*, c.nombre AS categoria_nombre, c.icono AS categoria_icono
-            FROM movimientos m
-            LEFT JOIN categorias c ON m.categoria_id = c.id
-            WHERE m.usuario_id = %s
-              AND DATE(m.fecha) BETWEEN %s AND %s
-            ORDER BY {orden_sql}
-        """, (usuario_id, fecha_desde, fecha_hasta))
-        movimientos_list = cursor.fetchall()
-
-        # --------------------------------------------------------------------
-        # Agrupar por fecha legible
-        # --------------------------------------------------------------------
-        movimientos_agrupados = defaultdict(list)
-        for m in movimientos_list:
-            fecha_obj = m['fecha']
-            fecha_str = fecha_obj.strftime('%Y-%m-%d') if isinstance(fecha_obj, (datetime, date)) else m['fecha']
-            fecha_legible = formatear_fecha_humana(fecha_str)
-            movimientos_agrupados[fecha_legible].append(m)
-
-        # --------------------------------------------------------------------
-        # Mostrar solo el primer grupo si no se pidió ver todo
-        # --------------------------------------------------------------------
-        mostrar_todo = request.args.get('ver_todo') == '1'
-        if not mostrar_todo:
-            movimientos_agrupados = dict(list(movimientos_agrupados.items())[:1])
-
-        # --------------------------------------------------------------------
-        # Calcular saldo
-        # --------------------------------------------------------------------
+        # Calcular saldo actual
         cursor.execute("""
             SELECT COALESCE(SUM(
                 CASE 
@@ -425,58 +348,21 @@ def movimientos():
         """, (usuario_id,))
         saldo_actual = cursor.fetchone()['saldo']
 
-        # --------------------------------------------------------------------
         # Cargar categorías del usuario
-        # --------------------------------------------------------------------
         cursor.execute("SELECT id, nombre, icono FROM categorias WHERE usuario_id = %s", (usuario_id,))
         categorias = cursor.fetchall()
 
-        # --------------------------------------------------------------------
-        # Consultar préstamos (si aplica)
-        # --------------------------------------------------------------------
-        prestamos = []
-        movimientos_agrupados = {}
-        if seccion == 'prestamos':
-            ordenes_prestamos = {
-                'fecha_desc': 'fecha DESC',
-                'fecha_asc': 'fecha ASC',
-                'valor_desc': 'monto_inicial DESC',
-                'valor_asc': 'monto_inicial ASC',
-            }
-            orden_prestamo_sql = ordenes_prestamos.get(ordenar, 'fecha DESC')
-
-            cursor.execute(f"""
-                SELECT id, descripcion, persona, monto_inicial, saldo, fecha, frecuencia, estado 
-                FROM prestamos
-                WHERE usuario_id = %s
-                  AND DATE(fecha) BETWEEN %s AND %s
-                ORDER BY {orden_prestamo_sql}
-            """, (usuario_id, fecha_desde, fecha_hasta))
-            prestamos = cursor.fetchall()
-
-        deudas = []  # Inicializa aunque sea vacío
-
         return render_template(
             'movimientos.html',
-            movimientos_agrupados=movimientos_agrupados,  # <- ahora siempre está definido
             saldo_actual=saldo_actual,
-            fecha_desde=fecha_desde,
-            fecha_hasta=fecha_hasta,
-            ordenar=ordenar,
             categorias=categorias,
-            prestamos=prestamos,
-            deudas=deudas,
-            seccion=seccion,
-            dia_actual=dia_param,
             usuario=session.get('usuario'),
-            usuario_foto=usuario_foto,
-            mostrar_todo=mostrar_todo
+            usuario_foto=usuario_foto
         )
-
-
 
     finally:
         cursor.close()
+
 
 
 
@@ -579,7 +465,8 @@ def abonar_prestamo():
     finally:
         cursor.close()
 
-    return redirect(url_for('movimientos'))
+    return redirect(url_for('registros'))
+
 
 
 
@@ -587,6 +474,64 @@ def abonar_prestamo():
 def registrar_deuda():
     # código para registrar deuda
     return render_template('registrar_deuda.html')
+
+
+
+@app.route('/registros')
+def registros():
+    if 'logueado' not in session or 'usuario_id' not in session:
+        return redirect(url_for('iniciar_sesion'))
+
+    usuario_id = session['usuario_id']
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    try:
+        # Obtener movimientos del usuario
+        cursor.execute("""
+            SELECT m.*, c.nombre AS categoria_nombre, c.icono AS categoria_icono
+            FROM movimientos m
+            LEFT JOIN categorias c ON m.categoria_id = c.id
+            WHERE m.usuario_id = %s
+            ORDER BY m.fecha DESC
+        """, (usuario_id,))
+        movimientos = cursor.fetchall()
+
+        # 🚨 Obtener préstamos del usuario (antes de usarlos)
+        cursor.execute("""
+            SELECT id, fecha, descripcion, monto_inicial, estado, saldo
+            FROM prestamos
+            WHERE usuario_id = %s
+            ORDER BY fecha DESC
+        """, (usuario_id,))
+        prestamos = cursor.fetchall()
+
+        # Agrupar préstamos por fecha legible
+        prestamos_agrupados = defaultdict(list)
+        for p in prestamos:
+            fecha_obj = p['fecha']
+            fecha_str = fecha_obj.strftime('%Y-%m-%d') if isinstance(fecha_obj, (datetime, date)) else str(p['fecha'])
+            fecha_legible = formatear_fecha_humana(fecha_str)
+            prestamos_agrupados[fecha_legible].append(p)
+
+        # Agrupar movimientos por fecha legible
+        movimientos_agrupados = defaultdict(list)
+        for m in movimientos:
+            fecha_obj = m['fecha']
+            fecha_str = fecha_obj.strftime('%Y-%m-%d') if isinstance(fecha_obj, (datetime, date)) else m['fecha']
+            fecha_legible = formatear_fecha_humana(fecha_str)
+            movimientos_agrupados[fecha_legible].append(m)
+
+        return render_template(
+            'registros.html',
+            movimientos_agrupados=movimientos_agrupados,
+            prestamos_agrupados=prestamos_agrupados,
+            mostrar_todo=request.args.get('ver_todo') == '1'
+        )
+
+    finally:
+        cursor.close()
+
+
 
 
 
@@ -658,9 +603,6 @@ def exportar_pdf():
                      mimetype='application/pdf')
 
 
-@app.route('/registros')
-def registros():
-    return render_template('registros.html')
 
 
 
@@ -738,8 +680,11 @@ def mostrar_asistente():
 
 @app.route('/consultar', methods=['POST'])
 def consultar():
-    consulta = request.form.get('consulta', '')
+    consulta_usuario = request.form.get('consulta', '')
     imagen = request.files.get('imagen', None)
+
+    # 👉 Instrucción para que siempre responda en español
+    consulta = f"Responde siempre en español. {consulta_usuario}"
 
     try:
         if imagen:
@@ -749,21 +694,26 @@ def consultar():
                 tipo = "jpeg"
 
             imagen_codificada = {
-                "inlineData": {
-                    "mimeType": f"image/{tipo}",
+                "inline_data": {
+                    "mime_type": f"image/{tipo}",
                     "data": contenido
                 }
             }
 
-            respuesta = asyncio.run(modelo.generate_content([consulta, imagen_codificada]))
+            respuesta = modelo.generate_content([
+                imagen_codificada,
+                {"text": consulta}
+            ])
+
         else:
-            respuesta = asyncio.run(modelo.generate_content(consulta))
+            respuesta = modelo.generate_content(consulta)
 
         texto_respuesta = respuesta.text if hasattr(respuesta, 'text') else "No se obtuvo respuesta."
         return jsonify({"mensaje": texto_respuesta})
 
     except Exception as e:
         return jsonify({"mensaje": f"❌ Error: {str(e)}"})
+
 
 
 if __name__ == '__main__':
