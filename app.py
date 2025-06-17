@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, current_app
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, date
+from flask_cors import CORS
 from io import BytesIO
 from xhtml2pdf import pisa
 from collections import defaultdict
@@ -23,6 +24,7 @@ import asyncio
 import os
 
 app = Flask(__name__)
+CORS(app) 
 
 
 # Configurar MySQL (Flask-MySQLdb)
@@ -129,28 +131,38 @@ def registrarse():
 
 
 
-@app.route('/iniciar_sesion', methods=['GET', 'POST'])
-def iniciar_sesion():
-    if request.method == 'POST':
-        usuario = request.form['usuario']
-        clave = request.form['clave']
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    usuario = data.get('usuario')
+    clave = data.get('clave')
 
-        # ✅ Definir cursor correctamente
-        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT * FROM usuarios WHERE nombre_usuario = %s', (usuario,))
-        cuenta = cursor.fetchone()
-        cursor.close()  # ✅ Cierra el cursor después de usarlo
+    if not usuario or not clave:
+        return jsonify({"success": False, "mensaje": "Faltan datos"}), 400
 
-        if cuenta and check_password_hash(cuenta['contraseña'], clave):
-            session['logueado'] = True
-            session['usuario_id'] = cuenta['id']  # ✅ Usa SIEMPRE 'usuario_id'
-            session['usuario'] = cuenta['nombre_usuario']
-            return redirect(url_for('panel'))
-        else:
-            flash('Nombre de usuario o contraseña incorrectos')
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT * FROM usuarios WHERE nombre_usuario = %s', (usuario,))
+    cuenta = cursor.fetchone()
+    cursor.close()
 
-    return render_template('iniciar_sesion.html')
+    if cuenta:
+        print("Contraseña en BD:", cuenta['contraseña'])  # Solo para debug (no lo uses en producción)
 
+    if cuenta and check_password_hash(cuenta['contraseña'], clave):
+        return jsonify({
+            "success": True,
+            "mensaje": "Inicio de sesión exitoso",
+            "usuario_id": cuenta["id"],
+            "nombre_usuario": cuenta["nombre_usuario"]  # 👈 AÑADE ESTO
+        })
+    else:
+        return jsonify({
+            "success": False,
+            "mensaje": "Nombre de usuario o contraseña incorrectos"
+        }), 401
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0')  # para permitir acceso desde tu red local
 
 
 @app.route('/panel')
@@ -730,4 +742,5 @@ def consultar():
         return jsonify({"mensaje": f"❌ Error: {str(e)}"})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
+
