@@ -678,15 +678,26 @@ def mostrar_asistente():
     return render_template('asistente.html')
 
 
+
 @app.route('/consultar', methods=['POST'])
 def consultar():
     consulta_usuario = request.form.get('consulta', '')
     imagen = request.files.get('imagen', None)
 
-    # 👉 Instrucción para que siempre responda en español
-    consulta = f"Responde siempre en español. {consulta_usuario}"
+    # Verifica y limpia historial incompatible
+    if 'historial' in session:
+        for parte in session['historial']:
+            if 'role' in parte:
+                session.pop('historial', None)
+                break
+
+    # Inicializa historial si no existe
+    if 'historial' not in session:
+        session['historial'] = [{"text": "Responde siempre en español."}]
 
     try:
+        partes = session['historial'][:]  # Copia del historial actual
+
         if imagen:
             contenido = base64.b64encode(imagen.read()).decode("utf-8")
             tipo = imagen.mimetype.split("/")[-1]
@@ -700,21 +711,23 @@ def consultar():
                 }
             }
 
-            respuesta = modelo.generate_content([
-                imagen_codificada,
-                {"text": consulta}
-            ])
+            partes.append(imagen_codificada)
 
-        else:
-            respuesta = modelo.generate_content(consulta)
+        partes.append({"text": consulta_usuario})
+
+        # Consulta al modelo con historial completo
+        respuesta = modelo.generate_content(partes)
 
         texto_respuesta = respuesta.text if hasattr(respuesta, 'text') else "No se obtuvo respuesta."
+
+        # Guarda solo partes válidas
+        session['historial'].append({"text": consulta_usuario})
+        session['historial'].append({"text": texto_respuesta})
+
         return jsonify({"mensaje": texto_respuesta})
 
     except Exception as e:
         return jsonify({"mensaje": f"❌ Error: {str(e)}"})
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)

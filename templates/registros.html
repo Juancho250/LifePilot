@@ -9,7 +9,7 @@
 {% block contenido %}
 
 
-  <main>
+  <main class="contenedor-principal">
     <form method="GET" class="filtros-form">
       <label>Desde:
         <input type="date" name="fecha_desde" value="{{ request.args.get('fecha_desde', '') }}">

@@ -249,7 +249,7 @@ input[type=text] {
 input[type=email]:focus,
 input[type=password]:focus,
 input[type=text]:focus {
-  border-color: #1abc9c;
+  border-color: black;
   outline: 0;
 }
 

@@ -14,14 +14,21 @@
   <div id="chat"></div>
 
   <div id="imagenPrevioContainer">
-    <img id="imagenPrevio" src="" alt="Vista previa de la imagen">
+    <img id="imagenPrevio" src="" alt="">
   </div>
 
   <form id="formulario1" enctype="multipart/form-data">
-    <textarea id="consulta" name="consulta" placeholder="Escribe tu consulta..."></textarea>
-    <input type="file" id="imagen" name="imagen" accept="image/*">
+    <label for="imagen" class="icono-imagen" title="Subir imagen">
+      <i class="fas fa-photo-film"></i>
+    </label>
+    <input type="file" id="imagen" name="imagen" accept="image/*" style="display: none;">
+
+    <input type="text" id="consulta" name="consulta" placeholder="Escribe tu consulta...">
+
     <input type="submit" value="Enviar">
   </form>
+
+
 </div>
 
 {% endblock %}

@@ -1,103 +1,165 @@
+.contenedor {
+  width: 750px; /* 🔒 Ancho fijo */
+  height: 79vh;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 800px){
   .contenedor {
-    max-width: 700px;
-    margin: 50px auto;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-  }
+  width: 550px; 
+}
+}
 
-  h1 {
-    text-align: center;
-    padding: 20px;
-    background-color: #3498db;
-    color: white;
-    margin: 0;
-  }
+@media (max-width: 800px){
+  .contenedor {
+  width: 100%; 
+}
+}
 
-  #chat {
-    max-height: 500px;
-    overflow-y: auto;
-    padding: 20px;
-    background-color: #fdfdfd;
-  }
+/* Título fijo */
+h1 {
+  text-align: center;
+  padding: 20px;
+  background-color: black;
+  color: white;
+  margin: 0;
+  flex-shrink: 0;
+}
 
-  .mensaje {
-    display: flex;
-    margin-bottom: 15px;
-  }
+/* Imagen previa fija, sin forzar el alto del contenedor */
+#imagenPrevioContainer {
+  flex-shrink: 0;
+  padding: 0 15px;
+  overflow: hidden;
+}
+#imagenPrevio {
+  max-width: 100%;
+  margin-top: 10px;
+  border-radius: 8px;
+  max-height: 150px;
+  object-fit: contain;
+}
 
-  .mensaje.usuario {
-    justify-content: flex-end;
-  }
+/* Área del chat con scroll interno */
+#chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background-color: #fdfdfd;
+  min-height: 0; /* Clave para evitar que crezca fuera del contenedor */
+}
 
-  .mensaje.asistente {
-    justify-content: flex-start;
-  }
+/* Mensajes */
+.mensaje {
+  display: flex;
+  margin-bottom: 15px;
+}
+.mensaje.usuario {
+  justify-content: flex-end;
+}
+.mensaje.asistente {
+  justify-content: flex-start;
+}
+.burbuja {
+  max-width: 50%;
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-size: 15px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: break-word; /* Evita que palabras largas rompan */
+}
+.usuario .burbuja {
 
-  .burbuja {
-    max-width: 70%;
-    padding: 10px 15px;
-    border-radius: 20px;
-    font-size: 15px;
-    line-height: 1.4;
-    white-space: pre-wrap;
-  }
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  border-bottom-right-radius: 0;
+}
+.asistente .burbuja {
+  background-color: #e6ecf0;
+  color: #333;
+  border-bottom-left-radius: 0;
+}
 
-  .usuario .burbuja {
-    background-color: #dcf8c6;
-    color: #333;
-    border-bottom-right-radius: 0;
-  }
+/* Formulario fijo abajo */
+form {
+  height: 80px;
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  padding: 15px;
+  border-top: 1px solid #ddd;
+  gap: 10px;
+  align-items: center;
+  box-sizing: border-box;
+}
 
-  .asistente .burbuja {
-    background-color: #e6ecf0;
-    color: #333;
-    border-bottom-left-radius: 0;
-  }
+/* Ícono de imagen (FontAwesome) */
+.icono-imagen {
+  font-size: 20px;
+  color: black;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+.icono-imagen:hover {
+  background-color: #eee;
+}
 
-  form {
-    display: flex;
-    flex-direction: column;
-    padding: 15px;
-    border-top: 1px solid #ddd;
-    gap: 10px;
-  }
+/* Campo de texto */
+input[type="text"] {
+  flex: 1;
+  height: 100%;
+  font-size: 16px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
 
-  textarea {
-    resize: none;
-    height: 80px;
-    font-size: 16px;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-  }
+/* Botón de enviar */
+input[type="submit"] {
+  background-color: black;
+  color: white;
+  padding: 0 40px;
+  height: 100%;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+input[type="submit"]:hover {
+  background-color: #222;
+}
 
-  input[type="file"] {
-    font-size: 14px;
-  }
 
-  input[type="submit"] {
-    background-color: #3498db;
-    color: white;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-  }
 
-  input[type="submit"]:hover {
-    background-color: #2980b9;
-  }
+.burbuja.animada::after {
+  content: '|';
+  animation: parpadeo 1s infinite;
+  opacity: 0.6;
+}
 
-  #imagenPrevioContainer {
-    display: none;
-    padding: 0 15px;
-  }
+@keyframes parpadeo {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0; }
+}
 
-  #imagenPrevio {
-    max-width: 100%;
-    margin-top: 10px;
-    border-radius: 8px;
-  }
+.imagen-mensaje {
+  max-width: 150px;
+  border-radius: 8px;
+  margin-bottom: 5px;
+}
