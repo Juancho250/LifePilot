@@ -757,10 +757,14 @@ def editar_idea(id):
 
 
 
-#este es el asistente virtual
-@app.route('/asistente', methods=['GET'], endpoint='asistente')
-def mostrar_asistente():
-    return render_template('asistente.html')
+@app.route('/asistente')
+def asistente():
+    if not session.get('logueado'):
+        return redirect(url_for('iniciar_sesion'))  # Protege el acceso
+
+    nombre_usuario = session.get('usuario')  # Lo guardaste así en iniciar_sesion
+    return render_template('asistente.html', nombre=nombre_usuario)
+
 
 
 
@@ -815,5 +819,5 @@ def consultar():
         return jsonify({"mensaje": f"❌ Error: {str(e)}"})
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, port=5000)
 

@@ -58,10 +58,12 @@ h1 {
 /* Mensajes */
 .mensaje {
   display: flex;
-  margin-bottom: 15px;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 10px;
 }
 .mensaje.usuario {
-  justify-content: flex-end;
+  align-items: flex-end;
 }
 .mensaje.asistente {
   justify-content: flex-start;
@@ -72,9 +74,18 @@ h1 {
   border-radius: 20px;
   font-size: 15px;
   line-height: 1.4;
-  white-space: pre-wrap;
+  white-space: normal;
   overflow-wrap: break-word; /* Evita que palabras largas rompan */
 }
+.burbuja u strong {
+  display: block;
+  font-size: 16px;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  text-decoration: underline;
+  font-weight: bold;
+}
+
 .usuario .burbuja {
 
   background-color: rgba(0, 0, 0, 0.5);
@@ -84,10 +95,12 @@ h1 {
   border-bottom-right-radius: 0;
 }
 .asistente .burbuja {
-  background-color: #e6ecf0;
-  color: #333;
+  background-color: #f1f5f9;
+  color: #222;
   border-bottom-left-radius: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
+
 
 /* Formulario fijo abajo */
 form {
@@ -158,8 +171,17 @@ input[type="submit"]:hover {
   50% { opacity: 0; }
 }
 
+.burbuja.animada {
+  min-height: 24px; /* para que la animación no contraiga la burbuja */
+  font-style: italic;
+  color: #888;
+}
+
+
 .imagen-mensaje {
   max-width: 150px;
   border-radius: 8px;
   margin-bottom: 5px;
+  object-fit: contain;
 }
+
