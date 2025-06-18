@@ -130,39 +130,26 @@ def registrarse():
     return render_template('registrarse.html')
 
 
+@app.route('/iniciar_sesion', methods=['GET', 'POST'])
+def iniciar_sesion():
+    if request.method == 'POST':
+        usuario = request.form['usuario']
+        clave = request.form['clave']
 
-@app.route('/api/login', methods=['POST'])
-def api_login():
-    data = request.get_json()
-    usuario = data.get('usuario')
-    clave = data.get('clave')
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('SELECT * FROM usuarios WHERE nombre_usuario = %s', (usuario,))
+        cuenta = cursor.fetchone()
+        cursor.close()
 
-    if not usuario or not clave:
-        return jsonify({"success": False, "mensaje": "Faltan datos"}), 400
+        if cuenta and check_password_hash(cuenta['contraseña'], clave):
+            session['logueado'] = True
+            session['usuario_id'] = cuenta['id']
+            session['usuario'] = cuenta['nombre_usuario']
+            return redirect(url_for('panel'))
+        else:
+            flash('Nombre de usuario o contraseña incorrectos')
 
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT * FROM usuarios WHERE nombre_usuario = %s', (usuario,))
-    cuenta = cursor.fetchone()
-    cursor.close()
-
-    if cuenta:
-        print("Contraseña en BD:", cuenta['contraseña'])  # Solo para debug (no lo uses en producción)
-
-    if cuenta and check_password_hash(cuenta['contraseña'], clave):
-        return jsonify({
-            "success": True,
-            "mensaje": "Inicio de sesión exitoso",
-            "usuario_id": cuenta["id"],
-            "nombre_usuario": cuenta["nombre_usuario"]  # 👈 AÑADE ESTO
-        })
-    else:
-        return jsonify({
-            "success": False,
-            "mensaje": "Nombre de usuario o contraseña incorrectos"
-        }), 401
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')  # para permitir acceso desde tu red local
+    return render_template('iniciar_sesion.html')
 
 
 @app.route('/panel')
@@ -297,19 +284,31 @@ def obtener_movimientos_mes_actual(usuario_id):
     finally:
         cursor.close()
 
-def formatear_fecha_humana(fecha_str):
+
+
+
+def formatear_fecha_humana(fecha):
     hoy = date.today()
-    fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+
+    # Convertir string a date si es necesario
+    if isinstance(fecha, str):
+        fecha_obj = datetime.strptime(fecha, "%Y-%m-%d").date()
+    elif isinstance(fecha, datetime):
+        fecha_obj = fecha.date()
+    elif isinstance(fecha, date):
+        fecha_obj = fecha
+    else:
+        raise ValueError("Tipo de fecha no soportado")
 
     if fecha_obj == hoy:
         return "Hoy"
     elif fecha_obj == hoy - timedelta(days=1):
         return "Ayer"
     elif 0 < (hoy - fecha_obj).days < 7:
-        return fecha_obj.strftime("%A").capitalize()  # Ej: "Lunes"
+        return fecha_obj.strftime("%A").capitalize()
     else:
-        return fecha_obj.strftime("%d/%m/%Y")  # Ej: "15/06/2025"
-
+        return fecha_obj.strftime("%d/%m/%Y")
+    
 
 
 
@@ -495,10 +494,12 @@ def registros():
         return redirect(url_for('iniciar_sesion'))
 
     usuario_id = session['usuario_id']
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    mostrar_todo = request.args.get('ver_todo', '0') == '1'
+    dias_mostrar = int(request.args.get('dias', 1)) if not mostrar_todo else 9999  # Muestra 1 día por defecto, o todos si ver_todo=1
 
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     try:
-        # Obtener movimientos del usuario
+        # Movimientos
         cursor.execute("""
             SELECT m.*, c.nombre AS categoria_nombre, c.icono AS categoria_icono
             FROM movimientos m
@@ -508,7 +509,7 @@ def registros():
         """, (usuario_id,))
         movimientos = cursor.fetchall()
 
-        # 🚨 Obtener préstamos del usuario (antes de usarlos)
+        # Préstamos
         cursor.execute("""
             SELECT id, fecha, descripcion, monto_inicial, estado, saldo
             FROM prestamos
@@ -517,33 +518,54 @@ def registros():
         """, (usuario_id,))
         prestamos = cursor.fetchall()
 
-        # Agrupar préstamos por fecha legible
-        prestamos_agrupados = defaultdict(list)
-        for p in prestamos:
-            fecha_obj = p['fecha']
-            fecha_str = fecha_obj.strftime('%Y-%m-%d') if isinstance(fecha_obj, (datetime, date)) else str(p['fecha'])
-            fecha_legible = formatear_fecha_humana(fecha_str)
-            prestamos_agrupados[fecha_legible].append(p)
+        hoy = date.today()
+        limite_fecha = hoy - timedelta(days=dias_mostrar - 1)
 
         # Agrupar movimientos por fecha legible
         movimientos_agrupados = defaultdict(list)
         for m in movimientos:
             fecha_obj = m['fecha']
-            fecha_str = fecha_obj.strftime('%Y-%m-%d') if isinstance(fecha_obj, (datetime, date)) else m['fecha']
-            fecha_legible = formatear_fecha_humana(fecha_str)
-            movimientos_agrupados[fecha_legible].append(m)
+            if isinstance(fecha_obj, datetime):
+                fecha_obj = fecha_obj.date()
+            if fecha_obj >= limite_fecha:
+                fecha_legible = formatear_fecha_humana(fecha_obj)
+                movimientos_agrupados[fecha_legible].append(m)
+
+        # Agrupar préstamos por fecha legible
+        prestamos_agrupados = defaultdict(list)
+        for p in prestamos:
+            fecha_obj = p['fecha']
+            if isinstance(fecha_obj, datetime):
+                fecha_obj = fecha_obj.date()
+            if fecha_obj >= limite_fecha:
+                fecha_legible = formatear_fecha_humana(fecha_obj)
+                prestamos_agrupados[fecha_legible].append(p)
+
+        # ¿Hay más elementos fuera del rango de fecha?
+        hay_mas_mov = any(
+            (m['fecha'].date() if isinstance(m['fecha'], datetime) else m['fecha']) < limite_fecha
+            for m in movimientos
+        )
+        hay_mas_prest = any(
+            (p['fecha'].date() if isinstance(p['fecha'], datetime) else p['fecha']) < limite_fecha
+            for p in prestamos
+        )
+
+        seccion = request.args.get('seccion', 'ingresos')  # valores: 'ingresos' o 'prestamos'
 
         return render_template(
             'registros.html',
             movimientos_agrupados=movimientos_agrupados,
             prestamos_agrupados=prestamos_agrupados,
-            mostrar_todo=request.args.get('ver_todo') == '1'
+            mostrar_todo=mostrar_todo,
+            dias_mostrar=dias_mostrar,
+            mostrar_mas_movimientos=hay_mas_mov,
+            mostrar_mas_prestamos=hay_mas_prest,
+            seccion=seccion
         )
 
     finally:
         cursor.close()
-
-
 
 
 
@@ -614,6 +636,57 @@ def exportar_pdf():
                      download_name='movimientos_filtrados.pdf',
                      mimetype='application/pdf')
 
+
+
+
+@app.route('/certificado_prestamo/<int:movimiento_id>')
+def certificado_prestamo(movimiento_id):
+    if 'logueado' not in session:
+        return redirect(url_for('iniciar_sesion'))
+
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    
+    # Obtenemos el préstamo
+    cursor.execute("SELECT * FROM prestamos WHERE id = %s", [movimiento_id])
+    prestamo = cursor.fetchone()
+    cursor.close()
+
+    if not prestamo or prestamo['usuario_id'] != session['usuario_id']:
+        return "No autorizado", 403
+
+    # Obtenemos info del prestamista
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute("SELECT nombre_usuario FROM usuarios WHERE id = %s", [prestamo['usuario_id']])
+    prestamista = cursor.fetchone()
+    cursor.close()
+
+    # Renderizar HTML
+    rendered_html = render_template(
+        'certificado_prestamo.html',
+        movimiento=prestamo,
+        prestamista=prestamista,
+        usuario_nombre=session.get('usuario'),  # quien lo solicita
+        ahora=datetime.now()
+    )
+
+    # Generar PDF
+    pdf_output = BytesIO()
+    pisa_status = pisa.CreatePDF(rendered_html, dest=pdf_output)
+
+    if pisa_status.err:
+        return f"Error al generar PDF: {pisa_status.err}"
+
+    pdf_output.seek(0)
+
+    # Elegir nombre del archivo dinámicamente
+    nombre_archivo = 'paz_y_salvo_deuda.pdf' if prestamo['saldo'] == 0 else 'certificado_prestamo.pdf'
+
+    return send_file(
+        pdf_output,
+        as_attachment=True,
+        download_name=nombre_archivo,
+        mimetype='application/pdf'
+    )
 
 
 

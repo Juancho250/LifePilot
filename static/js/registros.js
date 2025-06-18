@@ -42,6 +42,58 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+
+/*--------------------------------------
+---------------Modal Imprimir--------------
+----------------------------------------*/
+
+function abrirModalImpresion(seccion) {
+  document.getElementById('seccionFiltro').value = seccion;
+
+  const tipoLabel = document.getElementById('label-tipo');
+  const tipoSelect = document.getElementById('tipo');
+  const estadoLabel = document.getElementById('label-estado');
+  const estadoSelect = document.getElementById('estado');
+
+  if (seccion === 'ingresos') {
+    tipoLabel.style.display = tipoSelect.style.display = 'block';
+    estadoLabel.style.display = estadoSelect.style.display = 'none';
+  } else if (seccion === 'deudas' || seccion === 'prestamos') {
+    tipoLabel.style.display = tipoSelect.style.display = 'none';
+    estadoLabel.style.display = estadoSelect.style.display = 'block';
+  } else {
+    tipoLabel.style.display = tipoSelect.style.display =
+    estadoLabel.style.display = estadoSelect.style.display = 'none';
+  }
+
+  document.getElementById('modalImpresion').style.display = 'flex';
+}
+
+function cerrarModalImpresion() {
+  document.getElementById('modalImpresion').style.display = 'none';
+}
+
+// Enviar filtros y cargar PDF en iframe oculto
+document.getElementById('formularioFiltroImpresion').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const params = new URLSearchParams(formData).toString();
+  const iframe = document.getElementById('iframeImpresion');
+  iframe.src = `/exportar_pdf?${params}`;
+});
+
+// Imprimir automáticamente desde el iframe cuando esté listo
+function imprimirDesdeIframe() {
+  const iframe = document.getElementById('iframeImpresion');
+  if (iframe.contentWindow && iframe.contentDocument.readyState === 'complete') {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  }
+}
+
+
+
+
 /*--------------------------------------
 ---------------Modal abono--------------
 ----------------------------------------*/
@@ -99,6 +151,23 @@ window.cerrarModalAbono = cerrarModalAbono;
                 p.innerHTML = `<strong>${label}:</strong> ${attr.value}`;
                 contenedor.appendChild(p);
                 }
+            }
+
+            // Verificar si es un préstamo y mostrar botón
+            const tipo = fila.getAttribute('data-tipo');
+            const saldo = parseFloat(fila.getAttribute('data-saldo') || 0);
+            const idMovimiento = fila.getAttribute('data-id');
+
+            const divBotones = document.getElementById('modal-detalles-certificado');
+            divBotones.innerHTML = '';
+
+            if (tipo === 'prestamo' || tipo === 'deuda') {
+              const btn = document.createElement('button');
+              btn.textContent = saldo <= 0 ? 'Generar Paz y Salvo' : 'Generar Documento de Deuda';
+              btn.onclick = () => {
+                window.open(`/certificado_prestamo/${idMovimiento}`, '_blank');
+              };
+              divBotones.appendChild(btn);
             }
 
             // Mostrar modal

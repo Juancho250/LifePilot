@@ -9,7 +9,7 @@
 {% block contenido %}
 
 
-  <main class="contenedor-principal">
+  <main class="contenedor">
     <form method="GET" class="filtros-form">
       <label>Desde:
         <input type="date" name="fecha_desde" value="{{ request.args.get('fecha_desde', '') }}">
@@ -28,7 +28,6 @@
       </label>
 
       <button type="submit" formaction="{{ url_for('movimientos') }}">Filtrar</button>
-      <button type="submit" formaction="{{ url_for('exportar_pdf') }}">Exportar a PDF</button>
     </form>
 
     <!-- botones de secciones -->
@@ -47,43 +46,35 @@
     <!-- Sección Ingresos y Gastos -->
     <div id="seccionIngresos" class="seccion {% if seccion == 'ingresos' %}activa{% endif %}">
       <div class="tabla-responsive">
+        <div style="text-align: right; margin-bottom: 10px;">
+          <a href="#" onclick="abrirModalImpresion('ingresos')">Imprimir</a>
+        </div>
         <table class="tabla-movimientos">
           <tbody>
-            {% set contador = 0 %}
             {% for fecha_legible, items in movimientos_agrupados.items() %}
-              {% if not mostrar_todo and contador >= 1 %}
-                <tr>
-                  <td colspan="3" style="text-align:center;">
-                    <a href="{{ url_for('movimientos', ver_todo=1) }}">Ver más movimientos</a>
+              <tr>
+                <td colspan="3"><strong>{{ fecha_legible }}</strong></td>
+              </tr>
+              {% for item in items %}
+                <tr class="fila-modal-detalles"
+                    data-fecha="{{ item.fecha }}"
+                    data-tipo="{{ item.tipo }}"
+                    data-estado="{{ item.estado if item.estado else 'desconocido' }}"
+                    data-valor="{{ '%.2f'|format(item.valor) }}"
+                    data-descripcion="{{ item.descripcion }}">
+                  <td>{{ item.fecha }}</td>
+                  <td class="{% if item.tipo == 'ingreso' %}tipo-ingreso{% else %}tipo-gasto{% endif %}">
+                    {{ item.tipo|capitalize }}
                   </td>
+                  <td>${{ '%.2f'|format(item.valor) }}</td>
                 </tr>
-                {# Aquí no usamos break, simplemente omitimos mostrar más filas #}
-              {% else %}
-                <tr>
-                  <td colspan="3"><strong>{{ fecha_legible }}</strong></td>
-                </tr>
-                {% for item in items %}
-                  <tr class="fila-modal-detalles"
-                      data-fecha="{{ item.fecha }}"
-                      data-tipo="{{ item.tipo }}"
-                      data-estado="{{ item.estado if item.estado else 'desconocido' }}"
-                      data-valor="{{ '%.2f'|format(item.valor) }}"
-                      data-descripcion="{{ item.descripcion }}">
-                    <td>{{ item.fecha }}</td>
-                    <td class="{% if item.tipo == 'ingreso' %}tipo-ingreso{% else %}tipo-gasto{% endif %}">
-                      {{ item.tipo|capitalize }}
-                    </td>
-                    <td>${{ '%.2f'|format(item.valor) }}</td>
-                  </tr>
-                {% endfor %}
-                {% set contador = contador + 1 %}
-              {% endif %}
+              {% endfor %}
             {% endfor %}
-            {# Si no mostrás todo y hay más de un grupo, el link aparecerá después del primer grupo #}
-            {% if not mostrar_todo and movimientos_agrupados|length > 1 %}
+
+            {% if mostrar_mas_movimientos %}
               <tr>
                 <td colspan="3" style="text-align:center;">
-                  <a href="{{ url_for('registros', ver_todo=1) }}">Ver más movimientos</a>
+                  <a href="{{ url_for('registros', dias=dias_mostrar + 3, seccion='ingresos') }}">Ver más movimientos</a>
                 </td>
               </tr>
             {% endif %}
@@ -95,6 +86,9 @@
     <!-- Sección Deudas -->
     <div id="seccionDeudas" class="seccion {% if seccion == 'deudas' %}activa{% endif %}">
       <div class="tabla-responsive">
+        <div style="text-align: right; margin-bottom: 10px;">
+          <a href="#" onclick="abrirModalImpresion('deudas')">Imprimir</a>
+        </div>
         <table class="tabla-movimientos">
           <thead>
             <tr>
@@ -143,49 +137,44 @@
     <!-- Sección Préstamos -->
     <div id="seccionPrestamos" class="seccion {% if seccion == 'prestamos' %}activa{% endif %}">
       <div class="tabla-responsive">
+        <div style="text-align: right; margin-bottom: 10px;">
+          <a href="#" onclick="abrirModalImpresion('prestamos')">Imprimir</a>
+        </div>
         <table class="tabla-movimientos">
           <tbody>
-            {% set contador = 0 %}
             {% for fecha_legible, items in prestamos_agrupados.items() %}
-              {% if not mostrar_todo and contador >= 1 %}
-                <tr>
-                  <td colspan="3" style="text-align:center;">
-                    <a href="{{ url_for('registros', ver_todo=1) }}">Ver más préstamos</a>
+              <tr>
+                <td colspan="3"><strong>{{ fecha_legible }}</strong></td>
+              </tr>
+              {% for prestamo in items %}
+                <tr class="fila-modal-detalles"
+                    data-id="{{ prestamo.id }}"
+                    data-tipo="prestamo"
+                    data-fecha="{{ prestamo.fecha }}"
+                    data-descripcion="{{ prestamo.descripcion }}"
+                    data-monto_inicial="{{ '%.2f'|format(prestamo.monto_inicial) }}"
+                    data-estado="{{ prestamo.estado }}"
+                    data-saldo="{{ '%.2f'|format(prestamo.saldo) }}">
+                  <td>{{ prestamo.descripcion }}</td>
+                  <td class="{% if prestamo.estado == 'pendiente' %}estado-pendiente
+                              {% elif prestamo.estado == 'pagado' %}estado-pagado
+                              {% elif prestamo.estado == 'vencido' %}estado-vencido
+                              {% else %}estado-otro{% endif %}">
+                    {{ prestamo.estado|capitalize }}
+                  </td>
+                  <td>
+                    {% if prestamo.saldo > 0 %}
+                      <button type="button" onclick="event.stopPropagation(); abrirModalAbono({{ prestamo.id }}, {{ prestamo.saldo }})">Abonar</button>
+                    {% endif %}
                   </td>
                 </tr>
-              {% else %}
-                <tr>
-                  <td colspan="3"><strong>{{ fecha_legible }}</strong></td>
-                </tr>
-                {% for prestamo in items %}
-                  <tr class="fila-modal-detalles"
-                      data-id="{{ prestamo.id }}"
-                      data-fecha="{{ prestamo.fecha }}"
-                      data-descripcion="{{ prestamo.descripcion }}"
-                      data-monto_inicial="{{ '%.2f'|format(prestamo.monto_inicial) }}"
-                      data-estado="{{ prestamo.estado }}"
-                      data-saldo="{{ '%.2f'|format(prestamo.saldo) }}">
-                    <td>{{ prestamo.descripcion }}</td>
-                    <td class="{% if prestamo.estado == 'pendiente' %}estado-pendiente
-                                {% elif prestamo.estado == 'pagado' %}estado-pagado
-                                {% elif prestamo.estado == 'vencido' %}estado-vencido
-                                {% else %}estado-otro{% endif %}">
-                      {{ prestamo.estado|capitalize }}
-                    </td>
-                    <td>
-                      {% if prestamo.saldo > 0 %}
-                        <button type="button" onclick="event.stopPropagation(); abrirModalAbono({{ prestamo.id }}, {{ prestamo.saldo }})">Abonar</button>
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% endfor %}
-                {% set contador = contador + 1 %}
-              {% endif %}
+              {% endfor %}
             {% endfor %}
-            {% if not mostrar_todo and prestamos_agrupados|length > 1 %}
+
+            {% if mostrar_mas_prestamos %}
               <tr>
                 <td colspan="3" style="text-align:center;">
-                  <a href="{{ url_for('registros', ver_todo=1) }}">Ver más préstamos</a>
+                  <a href="{{ url_for('registros', dias=dias_mostrar + 3, seccion='prestamos') }}">Ver más préstamos</a>
                 </td>
               </tr>
             {% endif %}
@@ -193,6 +182,7 @@
         </table>
       </div>
     </div>
+
 
   </main>
 
@@ -215,13 +205,61 @@
 </div>
 
   <!-- Modal Detalles -->
-  <div id="modal-detalles" class="modal-detalles" aria-hidden="true" role="dialog" aria-labelledby="modal-detalles-titulo">
-    <div class="modal-detalles-contenido">
-      <button class="modal-detalles-cerrar" aria-label="Cerrar modal" onclick="cerrarModalDetalles()">&times;</button>
-      <h2 id="modal-detalles-titulo">Detalles</h2>
-      <div id="modal-detalles-contenido-info"></div>
-    </div>
+<div id="modal-detalles" class="modal-detalles" aria-hidden="true" role="dialog" aria-labelledby="modal-detalles-titulo">
+  <div class="modal-detalles-contenido">
+    <button class="modal-detalles-cerrar" aria-label="Cerrar modal" onclick="cerrarModalDetalles()">&times;</button>
+    <h2 id="modal-detalles-titulo">Detalles</h2>
+    <div id="modal-detalles-contenido-info"></div>
+    <div id="modal-detalles-certificado" style="margin-top: 15px;"></div> <!-- Aquí van los botones -->
   </div>
+</div>
+
+
+
+<!-- Modal impresión -->
+<div class="modalImpresion" style="display: none;" id="modalImpresion">
+  <div class="modal-contenido">
+    <h3>Filtrar antes de imprimir</h3>
+    <form id="formularioFiltroImpresion">
+      <input type="hidden" name="seccion" id="seccionFiltro">
+
+      <label for="fecha_desde">Fecha desde:</label>
+      <input type="date" name="fecha_desde" id="fecha_desde">
+
+      <label for="fecha_hasta">Fecha hasta:</label>
+      <input type="date" name="fecha_hasta" id="fecha_hasta">
+
+      <!-- Tipo (solo para ingresos) -->
+      <label for="tipo" id="label-tipo" style="display: none;">Tipo:</label>
+      <select name="tipo" id="tipo" style="display: none;">
+        <option value="">Todos</option>
+        <option value="ingreso">Ingreso</option>
+        <option value="gasto">Gasto</option>
+      </select>
+
+      <!-- Estado (solo para deudas y préstamos) -->
+      <label for="estado" id="label-estado" style="display: none;">Estado:</label>
+      <select name="estado" id="estado" style="display: none;">
+        <option value="">Todos</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="pagado">Pagado</option>
+        <option value="vencido">Vencido</option>
+      </select>
+
+      <div style="margin-top: 15px; display: flex; gap: 10px;">
+        <button type="submit">Imprimir</button>
+        <button type="button" onclick="cerrarModalImpresion()">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Iframe oculto -->
+<iframe id="iframeImpresion" style="display: none;" onload="imprimirDesdeIframe()"></iframe>
+
+
+
+
 
 {% endblock %}
 
