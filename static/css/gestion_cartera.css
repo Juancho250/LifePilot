@@ -1,64 +1,68 @@
-main{
-    margin: 0;
-    padding: 0;
+main {
+    min-height: 40vh;
     background-color: #f9f9f9;
     display: flex;
-    font-family: 'Raleway';
+    justify-content: center;
+    align-items: flex-start;
+    padding: 15px 25px; /* Aumenta el padding lateral */
+    font-family: 'Raleway', sans-serif;
 }
 
-.payment-title {
-    width: 100%;
-    text-align: center;
-}
-
-.form-container .field-container:first-of-type {
-    grid-area: name;
-}
-
-.form-container .field-container:nth-of-type(2) {
-    grid-area: number;
-}
-
-.form-container .field-container:nth-of-type(3) {
-    grid-area: expiration;
-}
-
-.form-container .field-container:nth-of-type(4) {
-    grid-area: security;
-}
-
-.field-container input {
-    -webkit-box-sizing: border-box;
-    box-sizing: border-box;
-}
-
-.field-container {
-    position: relative;
-}
 
 .form-container {
     display: grid;
-    grid-column-gap: 10px;
-    grid-template-columns: auto auto;
-    grid-template-rows: 90px 90px 90px;
-    grid-template-areas: "name name""number number""expiration security";
-    max-width: 400px;
-    padding: 20px;
-    color: #707070;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+        "name name"
+        "number number"
+        "expiration security";
+    gap: 10px;
+    max-width: 600px;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    color: #333;
+}
+
+/* Áreas del grid */
+.form-container .field-container:nth-child(1) {
+    grid-area: name;
+}
+.form-container .field-container:nth-child(2) {
+    grid-area: number;
+}
+.form-container .field-container:nth-child(3) {
+    grid-area: expiration;
+}
+.form-container .field-container:nth-child(4) {
+    grid-area: security;
+}
+
+.field-container {
+    display: flex;
+    flex-direction: column;
 }
 
 label {
-    padding-bottom: 5px;
-    font-size: 13px;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
 }
 
 input {
-    margin-top: 3px;
-    padding: 15px;
+    padding: 14px;
     font-size: 16px;
-    width: 100%;
-    border-radius: 3px;
+    border-radius: 6px;
     border: 1px solid #dcdcdc;
+    transition: border-color 0.3s;
+}
+
+input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 .ccicon {
@@ -68,6 +72,7 @@ input {
     top: calc(50% - 17px);
     width: 60px;
 }
+
 
 /* CREDIT CARD IMAGE STYLING */
 .preload * {
