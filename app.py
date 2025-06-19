@@ -1,6 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, current_app
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, date
+from flask_wtf import CSRFProtect
+from flask_login import LoginManager
 from flask_cors import CORS
 from io import BytesIO
 from xhtml2pdf import pisa
@@ -10,7 +12,6 @@ from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from google.generativeai import GenerativeModel, configure
-from flask import current_app as app
 from PIL import Image
 import base64
 import mimetypes
@@ -20,32 +21,46 @@ import base64
 import MySQLdb.cursors
 import MySQLdb
 import asyncio
-
 import os
 
+# Inicializar Flask
 app = Flask(__name__)
-CORS(app) 
+app.config['SECRET_KEY'] = 'd16f2bfa7491b82b8f9e30cf60eac02c82c648b1a93f7d9c671a3973d7eb69e5'
 
+# Middleware
+CORS(app)
+csrf = CSRFProtect(app)
 
-# Configurar MySQL (Flask-MySQLdb)
+# Cargar entorno local si aplica
+env = os.getenv("ENV", "local")
+if env == "local":
+    load_dotenv(".env.local")
+
+# Configuración MySQL
 app.config['MYSQL_HOST'] = os.environ.get("MYSQLHOST") or os.environ.get("DB_HOST")
 app.config['MYSQL_USER'] = os.environ.get("MYSQLUSER") or os.environ.get("DB_USER")
 app.config['MYSQL_PASSWORD'] = os.environ.get("MYSQLPASSWORD") or os.environ.get("DB_PASS")
 app.config['MYSQL_DB'] = os.environ.get("MYSQLDATABASE") or os.environ.get("DB_NAME")
 app.config['MYSQL_PORT'] = int(os.environ.get("MYSQLPORT") or os.environ.get("DB_PORT", 3306))
 
-# Inicializar MySQL
 mysql = MySQL(app)
 
-API_KEY_GEMINI = "AIzaSyDGCXwlcMTPtdBOKHwszEuuV4cFh-mfc18"
+# Conexión pymysql adicional si es necesario
+conn = pymysql.connect(
+    host=app.config['MYSQL_HOST'],
+    port=app.config['MYSQL_PORT'],
+    user=app.config['MYSQL_USER'],
+    password=app.config['MYSQL_PASSWORD'],
+    database=app.config['MYSQL_DB']
+)
 
-# Configurar la clave para Gemini
-genai.configure(api_key="AIzaSyDGCXwlcMTPtdBOKHwszEuuV4cFh-mfc18")  # 🔒 reemplázala por tu clave real
+print("✅ Conectado a la base de datos correctamente.")
 
-# Instanciar el modelo
-modelo = genai.GenerativeModel("gemini-1.5-flash")  
+# Configuración Gemini
+genai.configure(api_key="AIzaSyDGCXwlcMTPtdBOKHwszEuuV4cFh-mfc18")
+modelo = genai.GenerativeModel("gemini-1.5-flash")
 
-# Filtro personalizado para escapar texto en JavaScript
+# Filtro Jinja personalizado para JS
 def escapejs_filter(value):
     if not isinstance(value, str):
         value = str(value)
@@ -55,35 +70,15 @@ def escapejs_filter(value):
         "'": "\\'",
         '\n': '\\n',
         '\r': '\\r',
-        '</': '<\\/',
+        '</': '<\\/'
     }
     for old, new in replacements.items():
         value = value.replace(old, new)
     return value
 
-# Registrar el filtro en Jinja2
 app.jinja_env.filters['escapejs'] = escapejs_filter
 
-app.config['SECRET_KEY'] = 'd16f2bfa7491b82b8f9e30cf60eac02c82c648b1a93f7d9c671a3973d7eb69e5'
 
-
-
-# Carga el archivo .env.local si estás en local
-env = os.getenv("ENV", "local")
-if env == "local":
-    load_dotenv(".env.local")  # solo carga localmente
-
-# Conexión usando variables de entorno
-conn = pymysql.connect(
-    host=os.environ.get("MYSQLHOST") or os.environ.get("DB_HOST"),
-    port=int(os.environ.get("MYSQLPORT") or os.environ.get("DB_PORT", 3306)),
-    user=os.environ.get("MYSQLUSER") or os.environ.get("DB_USER"),
-    password=os.environ.get("MYSQLPASSWORD") or os.environ.get("DB_PASS"),
-    database=os.environ.get("MYSQLDATABASE") or os.environ.get("DB_NAME")
-)
-
-
-print("✅ Conectado a la base de datos correctamente.")
 
 
 CARPETA_FOTOS = 'static/uploads'
@@ -151,6 +146,21 @@ def iniciar_sesion():
 
     return render_template('iniciar_sesion.html')
 
+
+
+
+
+login_manager = LoginManager(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT * FROM usuarios WHERE id = %s', (user_id,))
+    cuenta = cursor.fetchone()
+    cursor.close()
+    if cuenta:
+        return Usuario(cuenta['id'], cuenta['nombre_usuario'])
+    return None
 
 @app.route('/panel')
 def panel():
@@ -488,6 +498,10 @@ def registrar_deuda():
 
 
 
+
+#---------------------------------------#
+#----Funciones de Registros-----#
+#---------------------------------------#
 @app.route('/registros')
 def registros():
     if 'logueado' not in session or 'usuario_id' not in session:
@@ -690,12 +704,158 @@ def certificado_prestamo(movimiento_id):
 
 
 
+#---------------------------------------#
+#----Funciones de la seccion Cartera-----#
+#---------------------------------------#
+
+
+def generar_url_wompi(monto, referencia):
+    monto_centavos = int(Decimal(monto) * 100)
+
+    return f"https://checkout.wompi.co/p/?public-key={os.environ['WOMPI_PUBLIC_KEY']}&currency=COP&amount-in-cents={monto_centavos}&reference={referencia}&redirect-url=https://tusitio.com/confirmacion_wompi"
+
 
 @app.route('/cartera')
 def cartera():
-    return render_template('cartera.html')
+    if 'usuario_id' not in session:
+        return redirect(url_for('iniciar_sesion'))
+    cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cur.execute("SELECT saldo_wallet FROM usuarios WHERE id=%s", (session['usuario_id'],))
+    saldo = cur.fetchone()['saldo_wallet']
+    cur.close()
+    return render_template('cartera.html', saldo=saldo)
 
 
+
+@app.route('/iniciar_paypal', methods=['POST'])
+def iniciar_paypal():
+    usuario_id = session.get('usuario_id')
+    monto = request.form.get('monto')
+    if not usuario_id or not monto:
+        flash("Usuario o monto faltante", "danger")
+        return redirect(url_for('cartera'))
+
+    # Crear orden con PayPal (simulado o real)
+    transaccion_id = f"PAYPAL-{usuario_id}-{int(datetime.now().timestamp())}"
+
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        INSERT INTO recargas (usuario_id, metodo, transaccion_id, monto)
+        VALUES (%s,'paypal',%s,%s)
+    """, (usuario_id, transaccion_id, monto))
+    mysql.connection.commit()
+    cur.close()
+
+    return render_template('paypal_checkout.html', transaccion_id=transaccion_id, monto=monto)
+
+
+
+
+@app.route('/procesar_pago_paypal', methods=['POST'])
+def procesar_pago_paypal():
+    # No uses Flask-WTF aquí, CSRF se usa solo en formularios HTML
+    data = request.get_json()
+    txid = data['orderID']
+    payer = data['payerID']
+    monto = data['monto']
+    usuario_id = session.get('usuario_id')
+
+    if not usuario_id:
+        return jsonify(status='error', message='Sesión no válida'), 401
+
+    cur = mysql.connection.cursor()
+
+    cur.execute("""
+        UPDATE recargas
+        SET estado='exitosa'
+        WHERE transaccion_id=%s
+    """, (txid,))
+    
+    cur.execute("""
+        INSERT INTO wallet_movimientos(usuario_id, referencia_externa, monto, tipo, estado, descripcion, medio_pago)
+        VALUES (%s, %s, %s, 'recarga', 'completado', 'Recarga PayPal', 'paypal')
+    """, (usuario_id, txid, monto))
+
+    cur.execute("""
+        UPDATE usuarios
+        SET saldo_wallet = saldo_wallet + %s
+        WHERE id = %s
+    """, (monto, usuario_id))
+
+    mysql.connection.commit()
+    cur.close()
+
+    return jsonify(status='ok')
+
+
+
+
+@app.route('/iniciar_wompi', methods=['POST'])
+def iniciar_wompi():
+    usuario_id = session.get('usuario_id')
+    monto = Decimal(request.form.get('monto'))
+    referencia = f"WOMPI-{usuario_id}-{int(datetime.utcnow().timestamp())}"
+    
+    url_pago = generar_url_wompi(monto, referencia)
+
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        INSERT INTO recargas (usuario_id, metodo, transaccion_id, monto)
+        VALUES (%s,'wompi',%s,%s)
+    """, (usuario_id, referencia, monto))
+    mysql.connection.commit()
+    cur.close()
+    
+    return redirect(url_pago)
+
+
+
+
+@app.route('/webhook_wompi', methods=['POST'])
+def webhook_wompi():
+    tx = request.get_json()['data']['transaction']
+    referencia = tx['reference']; estado = tx['status']
+    monto = Decimal(tx['amount_in_cents'])/100
+    
+    cur = mysql.connection.cursor()
+    cur.execute("""
+        UPDATE recargas SET estado=%s WHERE transaccion_id=%s
+    """, ('exitosa' if estado=='APPROVED' else 'fallida', referencia))
+
+    if estado == 'APPROVED':
+        cur.execute("""
+            INSERT IGNORE INTO wallet_movimientos(usuario_id, referencia_externa, monto, tipo, estado, descripcion, medio_pago)
+            SELECT usuario_id, transaccion_id, %s, 'recarga', 'completado', 'Recarga Wompi', 'wompi'
+            FROM recargas WHERE transaccion_id=%s
+        """, (monto, referencia))
+        cur.execute("""
+            UPDATE usuarios u JOIN recargas r 
+            ON u.id=r.usuario_id
+            SET u.saldo_wallet=u.saldo_wallet + %s 
+            WHERE r.transaccion_id=%s
+        """, (monto, referencia))
+
+    mysql.connection.commit()
+    cur.close()
+    return '', 200
+
+
+
+@app.route('/confirmacion_wompi')
+def confirmacion_wompi():
+    flash("Tu recarga ha sido procesada. Revisa tu saldo.", "success")
+    return redirect(url_for('cartera'))
+
+
+
+
+
+
+
+
+#---------------------------------------#
+#----Funciones de la seccion Cerrar sesion-----#
+#---------------------------------------#
 @app.route('/cerrar_sesion')
 def cerrar_sesion():
     session.clear()
@@ -704,7 +864,9 @@ def cerrar_sesion():
 
 
 
-    
+#---------------------------------------#
+#----Funciones de la seccion Ideas-----#
+#---------------------------------------#
 @app.route("/ideas", methods=["GET", "POST"])
 def ideas():
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
@@ -757,6 +919,10 @@ def editar_idea(id):
 
 
 
+
+#---------------------------------------#
+#----Funciones de la seccion Asistente-----#
+#---------------------------------------#
 @app.route('/asistente')
 def asistente():
     if not session.get('logueado'):

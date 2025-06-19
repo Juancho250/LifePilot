@@ -3,144 +3,230 @@
 {% block titulo %}Cartera{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/gestion_cartera.css') }}">
-{% endblock %}
+<style>
+/* === Contenedor principal (horizontal en desktop, vertical en móvil) === */
+.wallet-container {
+    display: flex;
+    /* Permite que los elementos se envuelvan si no hay espacio suficiente */
+    flex-wrap: wrap; 
+    /* Centra los elementos horizontalmente cuando se envuelven */
+    justify-content: center; 
+    /* Alinea los elementos al inicio verticalmente */
+    align-items: flex-start; 
+    gap: 40px; /* Espacio entre la tarjeta y el formulario */
+    padding: 40px 20px;
+    width: 100%;
+    box-sizing: border-box;
+}
 
+/* === Tarjeta de crédito (grande, destacada) === */
+.creditcard {
+    /* Permite que la tarjeta crezca y ocupe más espacio */
+    flex: 2 1 450px; /* flex-grow: 2, flex-shrink: 1, base: 450px */
+    max-width: 700px; /* Aumenta el tamaño máximo de la tarjeta */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Raleway', sans-serif;
+    min-width: 300px;
+}
+
+.creditcard .front svg {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 750 / 471;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #000000, #1a1a1a);
+    box-shadow: 0 15px 60px rgba(0, 0, 0, 0.6);
+}
+
+/* Texto SVG */
+svg text {
+    font-family: 'Source Code Pro', monospace;
+}
+
+/* === Formulario elegante (más pequeño) === */
+.recharge-panel {
+    /* Permite que el formulario se encoja y su tamaño base sea más pequeño */
+    flex: 1 1 300px; /* flex-grow: 1, flex-shrink: 1, base: 300px */
+    max-width: 380px; /* Ajusta el ancho máximo del formulario */
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    font-family: 'Raleway', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.recharge-panel h3 {
+    margin: 0;
+    font-size: 20px;
+    text-align: center;
+    color: #222;
+}
+
+.recharge-panel label {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.recharge-panel input[type="number"] {
+    padding: 10px 12px;
+    font-size: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.recharge-panel input[type="number"]:focus {
+    border-color: #0070ba;
+}
+
+/* === Botones modernos === */
+.button-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* Asegura que los formularios dentro de button-row sean flex items */
+.button-row form {
+    flex: 1; /* Permite que los formularios ocupen el espacio disponible */
+    display: flex; /* Convierte los formularios en contenedores flex */
+}
+
+.button-row button {
+    flex: 1; /* Permite que los botones ocupen todo el ancho de su formulario */
+    padding: 10px 16px;
+    font-size: 15px;
+    font-weight: 600;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.button-row button:hover {
+    transform: translateY(-2px);
+}
+
+.btn-wompi {
+    background-color: #000;
+}
+
+.btn-wompi:hover {
+    background-color: #000;
+}
+
+.btn-paypal {
+    background-color: #1f1d1d;
+}
+
+.btn-paypal:hover {
+    background-color: #1f1d1d;
+}
+
+/* === Responsive para pantallas pequeñas === */
+@media (max-width: 768px) {
+    .wallet-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .button-row {
+        flex-direction: column;
+    }
+
+    .button-row button {
+        width: 100%;
+    }
+}
+</style>
+
+{% endblock %}
 
 {% block contenido %}
 
-<main>
-    <!-- partial:index.partial.html -->
-        
-        <div class="container preload">
-            <div class="payment-title">
-                <h1>Informacion de pago</h1>
-            </div>
-            <div class="creditcard">
-                <div class="front">
-                    <div id="ccsingle"></div>
-                    <svg version="1.1" id="cardfront" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-                        x="0px" y="0px" viewBox="0 0 750 471" style="enable-background:new 0 0 750 471;" xml:space="preserve">
-                        <g id="Front">
-                            <g id="CardBackground">
-                                <g id="Page-1_1_">
-                                    <g id="amex_1_">
-                                        <path id="Rectangle-1_1_" class="lightcolor grey" d="M40,0h670c22.1,0,40,17.9,40,40v391c0,22.1-17.9,40-40,40H40c-22.1,0-40-17.9-40-40V40
-                                C0,17.9,17.9,0,40,0z" />
-                                    </g>
-                                </g>
-                                <path class="darkcolor greydark" d="M750,431V193.2c-217.6-57.5-556.4-13.5-750,24.9V431c0,22.1,17.9,40,40,40h670C732.1,471,750,453.1,750,431z" />
-                            </g>
-                            <text transform="matrix(1 0 0 1 60.106 295.0121)" id="svgnumber" class="st2 st3 st4">0123 4567 8910 1112</text>
-                            <text transform="matrix(1 0 0 1 54.1064 428.1723)" id="svgname" class="st2 st5 st6">JOHN DOE</text>
-                            <text transform="matrix(1 0 0 1 54.1074 389.8793)" class="st7 st5 st8">cardholder name</text>
-                            <text transform="matrix(1 0 0 1 479.7754 388.8793)" class="st7 st5 st8">expiration</text>
-                            <text transform="matrix(1 0 0 1 65.1054 241.5)" class="st7 st5 st8">card number</text>
-                            <g>
-                                <text transform="matrix(1 0 0 1 574.4219 433.8095)" id="svgexpire" class="st2 st5 st9">01/23</text>
-                                <text transform="matrix(1 0 0 1 479.3848 417.0097)" class="st2 st10 st11">VALID</text>
-                                <text transform="matrix(1 0 0 1 479.3848 435.6762)" class="st2 st10 st11">THRU</text>
-                                <polygon class="st2" points="554.5,421 540.4,414.2 540.4,427.9 		" />
-                            </g>
-                            <g id="cchip">
-                                <g>
-                                    <path class="st2" d="M168.1,143.6H82.9c-10.2,0-18.5-8.3-18.5-18.5V74.9c0-10.2,8.3-18.5,18.5-18.5h85.3
-                            c10.2,0,18.5,8.3,18.5,18.5v50.2C186.6,135.3,178.3,143.6,168.1,143.6z" />
-                                </g>
-                                <g>
-                                    <g>
-                                        <rect x="82" y="70" class="st12" width="1.5" height="60" />
-                                    </g>
-                                    <g>
-                                        <rect x="167.4" y="70" class="st12" width="1.5" height="60" />
-                                    </g>
-                                    <g>
-                                        <path class="st12" d="M125.5,130.8c-10.2,0-18.5-8.3-18.5-18.5c0-4.6,1.7-8.9,4.7-12.3c-3-3.4-4.7-7.7-4.7-12.3
-                                c0-10.2,8.3-18.5,18.5-18.5s18.5,8.3,18.5,18.5c0,4.6-1.7,8.9-4.7,12.3c3,3.4,4.7,7.7,4.7,12.3
-                                C143.9,122.5,135.7,130.8,125.5,130.8z M125.5,70.8c-9.3,0-16.9,7.6-16.9,16.9c0,4.4,1.7,8.6,4.8,11.8l0.5,0.5l-0.5,0.5
-                                c-3.1,3.2-4.8,7.4-4.8,11.8c0,9.3,7.6,16.9,16.9,16.9s16.9-7.6,16.9-16.9c0-4.4-1.7-8.6-4.8-11.8l-0.5-0.5l0.5-0.5
-                                c3.1-3.2,4.8-7.4,4.8-11.8C142.4,78.4,134.8,70.8,125.5,70.8z" />
-                                    </g>
-                                    <g>
-                                        <rect x="82.8" y="82.1" class="st12" width="25.8" height="1.5" />
-                                    </g>
-                                    <g>
-                                        <rect x="82.8" y="117.9" class="st12" width="26.1" height="1.5" />
-                                    </g>
-                                    <g>
-                                        <rect x="142.4" y="82.1" class="st12" width="25.8" height="1.5" />
-                                    </g>
-                                    <g>
-                                        <rect x="142" y="117.9" class="st12" width="26.2" height="1.5" />
-                                    </g>
-                                </g>
-                            </g>
-                        </g>
-                        <g id="Back">
-                        </g>
-                    </svg>
-                </div>
-                <div class="back">
-                    <svg version="1.1" id="cardback" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-                        x="0px" y="0px" viewBox="0 0 750 471" style="enable-background:new 0 0 750 471;" xml:space="preserve">
-                        <g id="Front">
-                            <line class="st0" x1="35.3" y1="10.4" x2="36.7" y2="11" />
-                        </g>
-                        <g id="Back">
-                            <g id="Page-1_2_">
-                                <g id="amex_2_">
-                                    <path id="Rectangle-1_2_" class="darkcolor greydark" d="M40,0h670c22.1,0,40,17.9,40,40v391c0,22.1-17.9,40-40,40H40c-22.1,0-40-17.9-40-40V40
-                            C0,17.9,17.9,0,40,0z" />
-                                </g>
-                            </g>
-                            <rect y="61.6" class="st2" width="750" height="78" />
-                            <g>
-                                <path class="st3" d="M701.1,249.1H48.9c-3.3,0-6-2.7-6-6v-52.5c0-3.3,2.7-6,6-6h652.1c3.3,0,6,2.7,6,6v52.5
-                        C707.1,246.4,704.4,249.1,701.1,249.1z" />
-                                <rect x="42.9" y="198.6" class="st4" width="664.1" height="10.5" />
-                                <rect x="42.9" y="224.5" class="st4" width="664.1" height="10.5" />
-                                <path class="st5" d="M701.1,184.6H618h-8h-10v64.5h10h8h83.1c3.3,0,6-2.7,6-6v-52.5C707.1,187.3,704.4,184.6,701.1,184.6z" />
-                            </g>
-                            <text transform="matrix(1 0 0 1 621.999 227.2734)" id="svgsecurity" class="st6 st7">985</text>
-                            <g class="st8">
-                                <text transform="matrix(1 0 0 1 518.083 280.0879)" class="st9 st6 st10">security code</text>
-                            </g>
-                            <rect x="58.1" y="378.6" class="st11" width="375.5" height="13.5" />
-                            <rect x="58.1" y="405.6" class="st11" width="421.7" height="13.5" />
-                            <text transform="matrix(1 0 0 1 59.5073 228.6099)" id="svgnameback" class="st12 st13">John Doe</text>
-                        </g>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="form-container">
-            <div class="field-container">
-                <label for="name">Nombre</label>
-                <input id="name" maxlength="20" type="text">
-            </div>
-            <div class="field-container">
-                <label for="cardnumber">Numero de tarjeta</label><span id="generatecard">Generar aleatoriamente</span>
-                <input id="cardnumber" type="text" pattern="[0-9]*" inputmode="numeric">
-                <svg id="ccicon" class="ccicon" width="750" height="471" viewBox="0 0 750 471" version="1.1" xmlns="http://www.w3.org/2000/svg"
-                    xmlns:xlink="http://www.w3.org/1999/xlink">
+<div class="wallet-container">
 
-                </svg>
-            </div>
-            <div class="field-container">
-                <label for="expirationdate">Expiracion (mm/yy)</label>
-                <input id="expirationdate" type="text" pattern="[0-9]*" inputmode="numeric">
-            </div>
-            <div class="field-container">
-                <label for="securitycode">Codigo de seguridad</label>
-                <input id="securitycode" type="text" pattern="[0-9]*" inputmode="numeric">
-            </div>
+    <!-- Tarjeta -->
+    <div class="creditcard">
+        <div class="front">
+            <svg version="1.1" id="cardfront" xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 750 471">
+                <g id="Front">
+                    <path fill="#000" d="M40,0h670c22.1,0,40,17.9,40,40v391c0,22.1-17.9,40-40,40H40c-22.1,0-40-17.9-40-40V40C0,17.9,17.9,0,40,0z"/>
+                    <!-- Líneas -->
+                    <line x1="1200" y1="50" x2="600" y2="50" stroke="#fff" stroke-width="1.5"/>
+                    <line x1="1100" y1="100" x2="550" y2="100" stroke="#fff" stroke-width="1.5"/>
+                    <line x1="1150" y1="150" x2="580" y2="150" stroke="#fff" stroke-width="1.5"/>
+                    <line x1="1250" y1="200" x2="430" y2="200" stroke="#fff" stroke-width="1.5"/>
+                    <line x1="1300" y1="250" x2="620" y2="250" stroke="#fff" stroke-width="1.5"/>
+                    <line x1="1400" y1="300" x2="610" y2="300" stroke="#fff" stroke-width="1.5"/>
+                    <line x1="1350" y1="350" x2="600" y2="350" stroke="#fff" stroke-width="1.5"/>
+                    <line x1="1250" y1="400" x2="590" y2="400" stroke="#fff" stroke-width="1.5"/>
+
+                    <!-- Nodos -->
+                    <circle cx="600" cy="50" r="3" fill="#fff"/>
+                    <circle cx="550" cy="100" r="3" fill="#fff"/>
+                    <circle cx="580" cy="150" r="3" fill="#fff"/>
+                    <circle cx="430" cy="200" r="3" fill="#fff"/>
+                    <circle cx="620" cy="250" r="3" fill="#fff"/>
+                    <circle cx="610" cy="300" r="3" fill="#fff"/>
+                    <circle cx="600" cy="350" r="3" fill="#fff"/>
+                    <circle cx="590" cy="400" r="3" fill="#fff"/>
+
+                    <!-- Branding -->
+                    <text x="60" y="100" font-size="36" fill="#fff" font-weight="bold">ORYON</text>
+                    <text x="60" y="280" font-size="28" fill="#fff">Saldo:</text>
+                    <text x="60" y="310" font-size="36" font-weight="bold" fill="#fff">${{ saldo }} COP</text>
+                    <text x="60" y="370" font-size="24" fill="#fff">**** **** **** 1122</text>
+                    <text x="60" y="410" font-size="18" fill="#fff">
+                        {{ session['usuario']|default("Usuario")|upper }}
+                    </text>
+                </g>
+            </svg>
         </div>
-    <!-- partial -->
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/imask/3.4.0/imask.min.js'></script><script  src="./script.js"></script>
-</main>
+    </div>
+
+    <!-- Panel de recarga -->
+    <div class="recharge-panel">
+        <h3>Recargar saldo</h3>
+        <label for="monto" class="form-label">Monto a recargar</label>
+        <input type="number" min="1000" name="monto" id="monto" class="form-control" placeholder="Ej. 10000" required>
+
+        <div class="button-row">
+            <!-- Wompi -->
+            <form action="{{ url_for('iniciar_wompi') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="monto" id="wompi_monto">
+                <button type="submit" class="btn-wompi">Wompi</button>
+            </form>
+
+            <!-- PayPal -->
+            <form action="{{ url_for('iniciar_paypal') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="monto" id="paypal_monto">
+                <button type="submit" class="btn-paypal">PayPal</button>
+            </form>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/cartera.js') }}"></script>
+<script>
+// Actualizar los campos ocultos con el monto
+document.getElementById('monto').addEventListener('input', function () {
+    const value = this.value;
+    document.getElementById('wompi_monto').value = value;
+    document.getElementById('paypal_monto').value = value;
+});
+</script>
 {% endblock %}

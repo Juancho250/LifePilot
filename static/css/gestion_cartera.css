@@ -1,10 +1,10 @@
 main {
-    min-height: 40vh;
+    min-height: 100vh;
     background-color: #f9f9f9;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
-    padding: 15px 25px; /* Aumenta el padding lateral */
+    align-items: center; /* Centrado vertical */
+    padding: 30px 25px;
     font-family: 'Raleway', sans-serif;
 }
 

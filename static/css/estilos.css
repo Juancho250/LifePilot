@@ -87,7 +87,7 @@ header, .contenido-superpuesto {
 }
 
 #sidebar ul li a:hover, .navbar a:hover, p a { 
-  color: #1abc9c; 
+  color: black; 
 }
 
 .pagina-inicio .inicio-contenedor a:hover, p a:hover { 
@@ -223,7 +223,7 @@ ul.error-messages {
 }
 
 button {
-  background-color: #1abc9c;
+  background-color: #000;
   color: #fff;
   padding: 10px 18px;
   border-radius: 5px;
@@ -386,10 +386,6 @@ p a {
   margin: 0;
 }
 
-#contenido-principal.desplazado {
-  filter: brightness(0.6);
-}
-
 footer {
   font-size: 0.9rem;
   color: #777;
@@ -440,7 +436,7 @@ footer {
 }
 
 .kanban-form button {
-  background-color: #4caf50;
+  background-color: #000;
   color: #fff;
   border: none;
   padding: 10px 15px;
@@ -502,7 +498,7 @@ footer {
 .form-idea button {
   align-self: flex-start;
   padding: 10px 20px;
-  background-color: #4caf50;
+  background-color: #000;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -510,7 +506,7 @@ footer {
 }
 
 .form-idea button:hover {
-  background-color: #388e3c;
+  background-color: #000;
 }
 
 .lista-ideas {
