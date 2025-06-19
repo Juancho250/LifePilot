@@ -12,7 +12,7 @@
 <main>
     <!-- partial:index.partial.html -->
         
-        <div class="container preload">
+        <div class="container preload"> 
             <div class="payment-title">
                 <h1>Informacion de pago</h1>
             </div>
@@ -134,7 +134,14 @@
                 <label for="securitycode">Codigo de seguridad</label>
                 <input id="securitycode" type="text" pattern="[0-9]*" inputmode="numeric">
             </div>
+            <div style="text-align: center;">
+               <button id="guardarTarjeta" class="btn-guardar">Guardar tarjeta</button>
+            </div>
         </div>
+        <div class="tarjetas-guardadas" id="tarjetasGuardadas">
+        <h3>Tarjetas guardadas</h3>
+        <!-- Aquí se insertarán las tarjetas -->
+    </div>
     <!-- partial -->
     <script src='https://cdnjs.cloudflare.com/ajax/libs/imask/3.4.0/imask.min.js'></script><script  src="./script.js"></script>
 </main>
@@ -143,4 +150,51 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/cartera.js') }}"></script>
+<script>
+  document.getElementById("guardarTarjeta").addEventListener("click", function () {
+    const name = document.getElementById("name").value;
+    const number = document.getElementById("cardnumber").value;
+    const expiration = document.getElementById("expirationdate").value;
+    const cvv = document.getElementById("securitycode").value;
+
+    let valid = true;
+
+    if (!name || !/^[a-zA-Z\s]+$/.test(name)) {
+      document.getElementById("name-error").textContent = "Nombre inválido";
+      valid = false;
+    } else {
+      document.getElementById("name-error").textContent = "";
+    }
+
+    if (!/^\d{16}$/.test(number)) {
+      document.getElementById("number-error").textContent = "Debe tener 16 dígitos";
+      valid = false;
+    } else {
+      document.getElementById("number-error").textContent = "";
+    }
+
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiration)) {
+      document.getElementById("expiration-error").textContent = "Formato inválido (mm/aa)";
+      valid = false;
+    } else {
+      document.getElementById("expiration-error").textContent = "";
+    }
+
+    if (!/^\d{3,4}$/.test(cvv)) {
+      document.getElementById("cvv-error").textContent = "CVV inválido";
+      valid = false;
+    } else {
+      document.getElementById("cvv-error").textContent = "";
+    }
+
+    if (valid) {
+      const ultimosDigitos = number.slice(-4);
+      const div = document.createElement("div");
+      div.className = "tarjeta";
+      div.innerHTML = `<strong>${name}</strong> - **** **** **** ${ultimosDigitos} <br> Vence: ${expiration}`;
+      document.getElementById("tarjetasGuardadas").appendChild(div);
+      alert("Tarjeta guardada con éxito (solo visual, no real)");
+    }
+  });
+</script>
 {% endblock %}
