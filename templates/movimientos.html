@@ -55,6 +55,8 @@
 
       <!-- Formulario Ingreso/Gasto -->
       <form method="POST" action="{{ url_for('movimientos') }}" id="form-movimiento">
+        {{ form_movimiento.hidden_tag() }}
+
         <button type="button" class="btn-regresar fa-solid fa-arrow-left" onclick="volverAlInicio()"></button>
         <input type="hidden" name="tipo" id="tipo">
         <label>Fecha</label>
@@ -87,7 +89,9 @@
 
       <!-- Formulario Préstamo -->
       <form method="POST" action="{{ url_for('registrar_prestamo') }}" id="form-prestamo">
-        <button type="button" class="btn-regresar" onclick="volverAlInicio()"></button>
+        {{ form_prestamo.hidden_tag() }}
+
+        <button type="button" class="btn-regresar fa-solid fa-arrow-left" onclick="volverAlInicio()"></button>
         <label>Fecha</label>
         <input type="date" name="fecha" required id="fecha-prestamo">
         <label>Frecuencia</label>
@@ -108,7 +112,9 @@
 
       <!-- Formulario Deuda -->
       <form method="POST" action="{{ url_for('registrar_deuda') }}" id="form-deuda">
-        <button class="btn-regresar" onclick="volverAlInicio()"></button>
+        {{ form_deuda.hidden_tag() }}
+
+        <button type="button" class="btn-regresar fa-solid fa-arrow-left" onclick="volverAlInicio()"></button>
         <label>Fecha</label>
         <input type="date" name="fecha" required id="fecha-deuda">
         <label>Frecuencia</label>

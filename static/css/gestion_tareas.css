@@ -1,0 +1,73 @@
+.kanban-board {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  background-color: #2c2b29; /* Color similar al fondo de la captura */
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.kanban-column {
+  background-color: #0e0e0e;
+  padding: 15px;
+  border-radius: 12px;
+  width: 300px;
+  min-height: 300px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.kanban-column form {
+  border: 2px dashed #888;
+}
+
+.kanban-column h3 { 
+  color: #fff;
+  margin-bottom: 15px;
+  font-size: 18px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 5px;
+}
+
+.kanban-task {
+  background-color: #1f1f1f;
+  color: #fff;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  cursor: grab;
+  transition: background 0.3s;
+}
+
+.kanban-task:hover {
+  background-color: #333;
+}
+
+.kanban-form {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 20px;
+}
+
+.kanban-form input, .kanban-form button {
+  padding: 8px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+}
+
+.kanban-form input[type="text"] {
+  flex: 1;
+}
+
+.kanban-form button {
+  background-color: #0079bf;
+  color: white;
+  cursor: pointer;
+}
+
+.kanban-form button:hover {
+  background-color: #005a8c;
+}

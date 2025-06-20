@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, current_app, jsonify
 from dotenv import load_dotenv
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date # ← Aquí estás incluyendo FlaskForm correctamente
+from flask_login import LoginManager, login_user, UserMixin, login_required, current_user, logout_user, login_manager
 from flask_wtf import CSRFProtect
-from flask_login import LoginManager
 from flask_cors import CORS
 from io import BytesIO
+from flaskform.forms import MovimientoForm, PrestamoForm, DeudaForm, ListaForm, LoginForm, DummyForm
 from xhtml2pdf import pisa
 from collections import defaultdict
 from decimal import Decimal
@@ -20,28 +21,23 @@ import pymysql
 import base64
 import MySQLdb.cursors
 import MySQLdb
+from config import Config
 import asyncio
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'flaskform')))
+
 
 # Inicializar Flask
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'd16f2bfa7491b82b8f9e30cf60eac02c82c648b1a93f7d9c671a3973d7eb69e5'
-
+app.config.from_object(Config)
 # Middleware
 CORS(app)
 csrf = CSRFProtect(app)
 
-# Cargar entorno local si aplica
-env = os.getenv("ENV", "local")
-if env == "local":
-    load_dotenv(".env.local")
 
-# Configuración MySQL
-app.config['MYSQL_HOST'] = os.environ.get("MYSQLHOST") or os.environ.get("DB_HOST")
-app.config['MYSQL_USER'] = os.environ.get("MYSQLUSER") or os.environ.get("DB_USER")
-app.config['MYSQL_PASSWORD'] = os.environ.get("MYSQLPASSWORD") or os.environ.get("DB_PASS")
-app.config['MYSQL_DB'] = os.environ.get("MYSQLDATABASE") or os.environ.get("DB_NAME")
-app.config['MYSQL_PORT'] = int(os.environ.get("MYSQLPORT") or os.environ.get("DB_PORT", 3306))
+login_manager.login_view = 'iniciar_sesion'
+
 
 mysql = MySQL(app)
 
@@ -57,7 +53,7 @@ conn = pymysql.connect(
 print("✅ Conectado a la base de datos correctamente.")
 
 # Configuración Gemini
-genai.configure(api_key="AIzaSyDGCXwlcMTPtdBOKHwszEuuV4cFh-mfc18")
+genai.configure(api_key=app.config['GEMINI_API_KEY'])
 modelo = genai.GenerativeModel("gemini-1.5-flash")
 
 # Filtro Jinja personalizado para JS
@@ -125,31 +121,16 @@ def registrarse():
     return render_template('registrarse.html')
 
 
-@app.route('/iniciar_sesion', methods=['GET', 'POST'])
-def iniciar_sesion():
-    if request.method == 'POST':
-        usuario = request.form['usuario']
-        clave = request.form['clave']
 
-        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT * FROM usuarios WHERE nombre_usuario = %s', (usuario,))
-        cuenta = cursor.fetchone()
-        cursor.close()
+class Usuario(UserMixin):
+    def __init__(self, id, nombre_usuario):
+        self.id = id
+        self.nombre_usuario = nombre_usuario
 
-        if cuenta and check_password_hash(cuenta['contraseña'], clave):
-            session['logueado'] = True
-            session['usuario_id'] = cuenta['id']
-            session['usuario'] = cuenta['nombre_usuario']
-            return redirect(url_for('panel'))
-        else:
-            flash('Nombre de usuario o contraseña incorrectos')
+    def get_id(self):
+        return str(self.id)
 
-    return render_template('iniciar_sesion.html')
-
-
-
-
-
+# Configurar login_manager
 login_manager = LoginManager(app)
 
 @login_manager.user_loader
@@ -162,17 +143,42 @@ def load_user(user_id):
         return Usuario(cuenta['id'], cuenta['nombre_usuario'])
     return None
 
-@app.route('/panel')
-def panel():
-    if 'logueado' in session:
-        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT foto FROM usuarios WHERE id = %s', (session['usuario_id'],))
-        resultado = cursor.fetchone()
-        cursor.close()  # ✅ Siempre cerrar el cursor
-        foto = resultado['foto'] if resultado and resultado['foto'] else None
-        return render_template('panel.html', usuario=session['usuario'], usuario_foto=foto)
+@app.route('/iniciar_sesion', methods=['GET', 'POST'])
+def iniciar_sesion():
+    form = LoginForm()
 
-    return redirect(url_for('iniciar_sesion'))
+    if form.validate_on_submit():
+        usuario = form.usuario.data
+        clave = form.clave.data
+
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('SELECT * FROM usuarios WHERE nombre_usuario = %s', (usuario,))
+        cuenta = cursor.fetchone()
+        cursor.close()
+
+        if cuenta and check_password_hash(cuenta['contraseña'], clave):
+            usuario_log = Usuario(cuenta['id'], cuenta['nombre_usuario'])
+            login_user(usuario_log)
+            return redirect(url_for('panel'))
+        else:
+            flash('Nombre de usuario o contraseña incorrectos')
+
+    return render_template('iniciar_sesion.html', form=form)
+
+
+
+
+@app.route('/panel')
+@login_required
+def panel():
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT foto FROM usuarios WHERE id = %s', (current_user.id,))
+    resultado = cursor.fetchone()
+    cursor.close()
+    
+    foto = resultado['foto'] if resultado and resultado['foto'] else None
+    return render_template('panel.html', usuario=current_user.nombre_usuario, usuario_foto=foto)
+
 
 
 
@@ -181,41 +187,83 @@ def panel():
 #---------------------------------------#
 # Mostrar y crear tareas
 # Mostrar y crear tareas
-@app.route('/tareas', methods=['GET', 'POST'])
-def tareas():
-    if 'logueado' not in session:
-        return redirect(url_for('iniciar_sesion'))
 
+
+
+@app.route('/tareas', methods=['GET', 'POST'])
+@login_required
+def tareas():
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
+    # Crear nueva tarea
     if request.method == 'POST':
         titulo = request.form['titulo']
-        estado = 'todo'
         fecha_limite = request.form.get('fecha_limite')
-        usuario_id = session['usuario_id']
+        lista_id = request.form.get('lista_id')
+        usuario_id = current_user.id
 
-        # Insertar tarea asociada al usuario actual
         cursor.execute('''
-            INSERT INTO tareas (titulo, estado, usuario_id, fecha_limite) 
+            INSERT INTO tareas (titulo, lista_id, usuario_id, fecha_limite)
             VALUES (%s, %s, %s, %s)
-        ''', (titulo, estado, usuario_id, fecha_limite))
-
+        ''', (titulo, lista_id, usuario_id, fecha_limite))
         mysql.connection.commit()
 
-    # Obtener tareas del usuario actual
-    cursor.execute('SELECT * FROM tareas WHERE usuario_id = %s', (session['usuario_id'],))
+    # Obtener listas y tareas
+    cursor.execute('SELECT * FROM listas WHERE usuario_id = %s', (current_user.id,))
+    listas = cursor.fetchall()
+
+    cursor.execute('SELECT * FROM tareas WHERE usuario_id = %s', (current_user.id,))
     tareas_usuario = cursor.fetchall()
+
+    cursor.close()
+    return render_template('tareas.html', listas=listas, tareas=tareas_usuario, usuario=current_user.nombre_usuario)
+
+
+
+
+@app.route('/crear_lista', methods=['POST'])
+@login_required
+def crear_lista():
+    nombre = request.form['nombre']
+    usuario_id = current_user.id
+
+    cursor = mysql.connection.cursor()
+    cursor.execute('INSERT INTO listas (nombre, usuario_id) VALUES (%s, %s)', (nombre, usuario_id))
+    mysql.connection.commit()
     cursor.close()
 
-    return render_template('tareas.html', usuario=session['usuario'], tareas=tareas_usuario)
+    return redirect(url_for('tareas'))
+
+
+
+
+@app.route('/actualizar_lista', methods=['POST'])
+@login_required
+def actualizar_lista():
+    data = request.get_json()
+    tarea_id = data.get('id')
+    nuevo_lista_id = data.get('nuevo_lista_id')
+
+    if not tarea_id or not nuevo_lista_id:
+        return jsonify({'exito': False, 'error': 'Datos incompletos'})
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            UPDATE tareas SET lista_id = %s
+            WHERE id = %s AND usuario_id = %s
+        ''', (nuevo_lista_id, tarea_id, current_user.id))
+        mysql.connection.commit()
+        cursor.close()
+        return jsonify({'exito': True})
+    except Exception as e:
+        return jsonify({'exito': False, 'error': str(e)})
 
 
 
 @app.route('/actualizar_estado', methods=['POST'])
+@login_required
 def actualizar_estado():
-    if 'logueado' not in session:
-        return jsonify({'exito': False, 'error': 'No autorizado'})
-
     data = request.get_json()
     tarea_id = data.get('id')
     nuevo_estado = data.get('nuevo_estado')
@@ -229,7 +277,7 @@ def actualizar_estado():
             UPDATE tareas 
             SET estado = %s 
             WHERE id = %s AND usuario_id = %s
-        ''', (nuevo_estado, tarea_id, session['usuario_id']))
+        ''', (nuevo_estado, tarea_id, current_user.id))
         mysql.connection.commit()
         actualizado = cursor.rowcount
         cursor.close()
@@ -241,11 +289,12 @@ def actualizar_estado():
         return jsonify({'exito': False, 'error': str(e)})
 
 
-@app.route('/actualizar_tarea', methods=['POST'])
-def actualizar_tarea():
-    if 'logueado' not in session:
-        return jsonify({'exito': False, 'error': 'No autorizado'})
 
+
+
+@app.route('/actualizar_tarea', methods=['POST'])
+@login_required
+def actualizar_tarea():
     data = request.get_json()
     tarea_id = data.get('id')
     nueva_fecha = data.get('nueva_fecha')
@@ -259,7 +308,7 @@ def actualizar_tarea():
             UPDATE tareas 
             SET fecha_limite = %s 
             WHERE id = %s AND usuario_id = %s
-        ''', (nueva_fecha, tarea_id, session['usuario_id']))
+        ''', (nueva_fecha, tarea_id, current_user.id))
         mysql.connection.commit()
         actualizado = cursor.rowcount
         cursor.close()
@@ -269,6 +318,76 @@ def actualizar_tarea():
         return jsonify({'exito': True})
     except Exception as e:
         return jsonify({'exito': False, 'error': str(e)})
+
+
+
+
+
+
+@app.route('/actualizar_color_lista', methods=['POST'])
+@login_required
+def actualizar_color_lista():
+    data = request.get_json()
+    if not data or 'id' not in data or 'color' not in data:
+        return jsonify(exito=False, error='Datos incompletos'), 400
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            UPDATE listas SET color = %s 
+            WHERE id = %s AND usuario_id = %s
+        ''', (data['color'], data['id'], current_user.id))
+        mysql.connection.commit()
+        
+        if cursor.rowcount == 0:
+            return jsonify(exito=False, error='Lista no encontrada'), 404
+
+        return jsonify(exito=True)
+    except Exception as e:
+        return jsonify(exito=False, error=str(e))
+
+
+
+
+
+@app.route('/renombrar_lista', methods=['POST'])
+@login_required
+def renombrar_lista():
+    datos = request.get_json()
+    if not datos or 'id' not in datos or 'nombre' not in datos:
+        return jsonify(exito=False, error='Datos incompletos'), 400
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('UPDATE listas SET nombre = %s WHERE id = %s AND usuario_id = %s',
+                       (datos['nombre'], datos['id'], current_user.id))
+        mysql.connection.commit()
+        if cursor.rowcount == 0:
+            return jsonify(exito=False, error='Lista no encontrada'), 404
+        return jsonify(exito=True)
+    except Exception as e:
+        return jsonify(exito=False, error=str(e))
+
+
+
+
+@app.route('/eliminar_lista', methods=['POST'])
+@login_required
+def eliminar_lista():
+    datos = request.get_json()
+    if not datos or 'id' not in datos:
+        return jsonify(exito=False, error='JSON malformado o faltante'), 400
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('DELETE FROM listas WHERE id = %s AND usuario_id = %s', (datos['id'], current_user.id))
+        mysql.connection.commit()
+        if cursor.rowcount == 0:
+            return jsonify(exito=False, error='Lista no encontrada'), 404
+        return jsonify(exito=True)
+    except Exception as e:
+        return jsonify(exito=False, error=str(e))
+
 
 
 
@@ -323,20 +442,16 @@ def formatear_fecha_humana(fecha):
 
 
 @app.route('/movimientos', methods=['GET', 'POST'])
+@login_required
 def movimientos():
-    if 'logueado' not in session or 'usuario_id' not in session:
-        return redirect(url_for('iniciar_sesion'))
-
-    usuario_id = session['usuario_id']
+    usuario_id = current_user.id
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     try:
-        # 📸 Consultar la foto del usuario
         cursor.execute('SELECT foto FROM usuarios WHERE id = %s', (usuario_id,))
         resultado_foto = cursor.fetchone()
         usuario_foto = resultado_foto['foto'] if resultado_foto and resultado_foto['foto'] else None
 
-        # POST: Registrar ingreso o gasto
         if request.method == 'POST':
             fecha = request.form['fecha']
             descripcion = request.form['descripcion']
@@ -345,7 +460,7 @@ def movimientos():
             categoria_id = request.form.get('categoria_id') or None
 
             if tipo not in ['ingreso', 'gasto']:
-                flash('Tipo de movimiento inválido para esta sección')
+                flash('Tipo de movimiento inválido', 'danger')
                 return redirect(url_for('movimientos'))
 
             cursor.execute("""
@@ -355,21 +470,18 @@ def movimientos():
             mysql.connection.commit()
             return redirect(url_for('movimientos'))
 
-        # Calcular saldo actual
         cursor.execute("""
             SELECT COALESCE(SUM(
-                CASE 
-                    WHEN tipo = 'ingreso' THEN valor
-                    WHEN tipo = 'gasto' THEN -valor
-                    ELSE 0
+                CASE WHEN tipo = 'ingreso' THEN valor
+                     WHEN tipo = 'gasto' THEN -valor
+                     ELSE 0
                 END
             ), 0) AS saldo
             FROM movimientos
-            WHERE usuario_id = %s AND tipo IN ('ingreso', 'gasto')
+            WHERE usuario_id = %s
         """, (usuario_id,))
         saldo_actual = cursor.fetchone()['saldo']
 
-        # Cargar categorías del usuario
         cursor.execute("SELECT id, nombre, icono FROM categorias WHERE usuario_id = %s", (usuario_id,))
         categorias = cursor.fetchall()
 
@@ -377,10 +489,12 @@ def movimientos():
             'movimientos.html',
             saldo_actual=saldo_actual,
             categorias=categorias,
-            usuario=session.get('usuario'),
-            usuario_foto=usuario_foto
+            usuario=current_user.nombre_usuario,
+            usuario_foto=usuario_foto,
+            form_movimiento=MovimientoForm(),
+            form_prestamo=PrestamoForm(),
+            form_deuda=DeudaForm()
         )
-
     finally:
         cursor.close()
 
@@ -389,13 +503,15 @@ def movimientos():
 
 
 
+
 @app.route('/crear_categoria', methods=['POST'])
+@login_required
 def crear_categoria():
     nombre = request.form.get('nombre')
     icono = request.form.get('icono')
-    usuario_id = session.get('usuario_id')
+    usuario_id = current_user.id
 
-    if not nombre or not icono or not usuario_id:
+    if not nombre or not icono:
         return jsonify(success=False, message="Datos incompletos")
 
     cursor = mysql.connection.cursor()
@@ -415,78 +531,54 @@ def crear_categoria():
 
 
 @app.route('/prestamos/registrar', methods=['POST'])
+@login_required
 def registrar_prestamo():
-    if 'logueado' not in session or 'usuario_id' not in session:
-        return redirect(url_for('iniciar_sesion'))
+    form = PrestamoForm()
 
-    usuario_id = session['usuario_id']
+    if not form.validate_on_submit():
+        flash('Error al enviar el formulario. Asegúrate de completar todos los campos correctamente.', 'danger')
+        return redirect(url_for('movimientos', seccion='prestamos'))
+
+    usuario_id = current_user.id
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
 
     try:
-        fecha = request.form['fecha']
-        frecuencia = request.form['frecuencia']
-        persona = request.form['persona']
-        descripcion = request.form['descripcion']
-        valor = Decimal(request.form['valor'])
+        fecha = form.fecha.data
+        frecuencia = form.frecuencia.data
+        persona = form.persona.data
+        descripcion = form.descripcion.data
+        valor = form.valor.data
         estado = 'pendiente'
         fecha_creacion = datetime.now()
 
         cursor.execute("""
-            INSERT INTO prestamos (descripcion, persona, usuario_id, monto_inicial, saldo, fecha, frecuencia, estado, fecha_creacion)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO prestamos (
+                descripcion, persona, usuario_id, monto_inicial, saldo, fecha, frecuencia, estado, fecha_creacion
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (descripcion, persona, usuario_id, valor, valor, fecha, frecuencia, estado, fecha_creacion))
+
         mysql.connection.commit()
+        flash('✅ Préstamo registrado correctamente.', 'success')
 
     except Exception as e:
-        # Aquí puedes loguear el error si quieres, o manejarlo
-        pass
+        mysql.connection.rollback()
+        flash('❌ Ocurrió un error al registrar el préstamo.', 'danger')
+        print('Error al registrar préstamo:', e)
 
     finally:
         cursor.close()
 
-    # Recoger filtros actuales para mantenerlos al recargar
+    # Preservar filtros si están presentes
     fecha_desde = request.args.get('fecha_desde', '')
     fecha_hasta = request.args.get('fecha_hasta', '')
     ordenar = request.args.get('ordenar', 'fecha_desc')
 
-    # Redirigir a movimientos con sección 'prestamos' y filtros
-    return redirect(url_for('movimientos', 
-                            seccion='prestamos', 
-                            fecha_desde=fecha_desde, 
-                            fecha_hasta=fecha_hasta, 
-                            ordenar=ordenar
-                            ))
+    return redirect(url_for('movimientos',
+                            seccion='prestamos',
+                            fecha_desde=fecha_desde,
+                            fecha_hasta=fecha_hasta,
+                            ordenar=ordenar))
 
-
-@app.route('/prestamos/abonar', methods=['POST'])
-def abonar_prestamo():
-    if 'logueado' not in session:
-        return redirect(url_for('iniciar_sesion'))
-
-    prestamo_id = request.form['prestamo_id']
-    monto_abono = Decimal(request.form['monto_abono'])
-
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-
-    try:
-        # Obtener saldo actual
-        cursor.execute("SELECT saldo FROM prestamos WHERE id = %s AND usuario_id = %s", (prestamo_id, session['usuario_id']))
-        prestamo = cursor.fetchone()
-
-        if prestamo:
-            nuevo_saldo = prestamo['saldo'] - monto_abono
-            estado = 'pagado' if nuevo_saldo <= 0 else 'pendiente'
-
-            cursor.execute("""
-                UPDATE prestamos 
-                SET saldo = %s, estado = %s 
-                WHERE id = %s AND usuario_id = %s
-            """, (max(nuevo_saldo, 0), estado, prestamo_id, session['usuario_id']))
-            mysql.connection.commit()
-    finally:
-        cursor.close()
-
-    return redirect(url_for('registros'))
 
 
 
@@ -503,11 +595,10 @@ def registrar_deuda():
 #----Funciones de Registros-----#
 #---------------------------------------#
 @app.route('/registros')
+@login_required
 def registros():
-    if 'logueado' not in session or 'usuario_id' not in session:
-        return redirect(url_for('iniciar_sesion'))
-
-    usuario_id = session['usuario_id']
+    form = DummyForm()
+    usuario_id = current_user.id
     mostrar_todo = request.args.get('ver_todo', '0') == '1'
     dias_mostrar = int(request.args.get('dias', 1)) if not mostrar_todo else 9999  # Muestra 1 día por defecto, o todos si ver_todo=1
 
@@ -575,7 +666,8 @@ def registros():
             dias_mostrar=dias_mostrar,
             mostrar_mas_movimientos=hay_mas_mov,
             mostrar_mas_prestamos=hay_mas_prest,
-            seccion=seccion
+            seccion=seccion,
+            form=form
         )
 
     finally:
@@ -583,18 +675,42 @@ def registros():
 
 
 
-@app.route('/exportar_pdf', methods=['GET'])
-def exportar_pdf():
-    if 'logueado' not in session:
-        return redirect(url_for('iniciar_sesion'))
 
+
+@app.route('/prestamos/abonar', methods=['POST'])
+@login_required
+def abonar_prestamo():
+    prestamo_id = request.form['prestamo_id']
+    monto_abono = Decimal(request.form['monto_abono'])
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    try:
+        cursor.execute("SELECT saldo FROM prestamos WHERE id = %s AND usuario_id = %s", (prestamo_id,current_user.id))
+        prestamo = cursor.fetchone()
+        if prestamo:
+            nuevo_saldo = prestamo['saldo'] - monto_abono
+            estado = 'pagado' if nuevo_saldo <= 0 else 'pendiente'
+            cursor.execute("""
+                UPDATE prestamos 
+                SET saldo = %s, estado = %s 
+                WHERE id = %s AND usuario_id = %s
+            """, (max(nuevo_saldo, 0), estado, prestamo_id, current_user.id))
+            mysql.connection.commit()
+    finally:
+        cursor.close()
+    return redirect(url_for('registros'))
+
+
+
+
+@app.route('/exportar_pdf', methods=['GET'])
+@login_required
+def exportar_pdf():
     fecha_desde = request.args.get('fecha_desde')
     fecha_hasta = request.args.get('fecha_hasta')
     ordenar = request.args.get('ordenar')
     seccion = request.args.get('seccion', 'deudas')
-    usuario_id = session['usuario_id']
+    usuario_id = current_user.id
 
-    # Construir consulta SQL con filtros y seccion
     query = '''
         SELECT * FROM movimientos
         WHERE usuario_id = %s
@@ -627,15 +743,16 @@ def exportar_pdf():
     movimientos = cursor.fetchall()
     cursor.close()
 
-    # Leer logo y convertir a base64
     logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo.png')
     with open(logo_path, 'rb') as image_file:
         logo_base64 = base64.b64encode(image_file.read()).decode('utf-8')
 
-    rendered_html = render_template('pdf_movimientos.html',
-                                    movimientos=movimientos,
-                                    seccion=seccion,
-                                    logo_base64=logo_base64)
+    rendered_html = render_template(
+        'pdf_movimientos.html',
+        movimientos=movimientos,
+        seccion=seccion,
+        logo_base64=logo_base64
+    )
 
     pdf_output = BytesIO()
     pisa_status = pisa.CreatePDF(rendered_html, dest=pdf_output)
@@ -644,7 +761,6 @@ def exportar_pdf():
         return f"Error al generar PDF: {pisa_status.err}"
 
     pdf_output.seek(0)
-
     return send_file(pdf_output,
                      as_attachment=True,
                      download_name='movimientos_filtrados.pdf',
@@ -654,36 +770,29 @@ def exportar_pdf():
 
 
 @app.route('/certificado_prestamo/<int:movimiento_id>')
+@login_required
 def certificado_prestamo(movimiento_id):
-    if 'logueado' not in session:
-        return redirect(url_for('iniciar_sesion'))
-
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    
-    # Obtenemos el préstamo
     cursor.execute("SELECT * FROM prestamos WHERE id = %s", [movimiento_id])
     prestamo = cursor.fetchone()
     cursor.close()
 
-    if not prestamo or prestamo['usuario_id'] != session['usuario_id']:
+    if not prestamo or prestamo['usuario_id'] != current_user.id:
         return "No autorizado", 403
 
-    # Obtenemos info del prestamista
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cursor.execute("SELECT nombre_usuario FROM usuarios WHERE id = %s", [prestamo['usuario_id']])
     prestamista = cursor.fetchone()
     cursor.close()
 
-    # Renderizar HTML
     rendered_html = render_template(
         'certificado_prestamo.html',
         movimiento=prestamo,
         prestamista=prestamista,
-        usuario_nombre=session.get('usuario'),  # quien lo solicita
+        usuario_nombre=current_user.nombre_usuario,
         ahora=datetime.now()
     )
 
-    # Generar PDF
     pdf_output = BytesIO()
     pisa_status = pisa.CreatePDF(rendered_html, dest=pdf_output)
 
@@ -691,8 +800,6 @@ def certificado_prestamo(movimiento_id):
         return f"Error al generar PDF: {pisa_status.err}"
 
     pdf_output.seek(0)
-
-    # Elegir nombre del archivo dinámicamente
     nombre_archivo = 'paz_y_salvo_deuda.pdf' if prestamo['saldo'] == 0 else 'certificado_prestamo.pdf'
 
     return send_file(
@@ -701,6 +808,7 @@ def certificado_prestamo(movimiento_id):
         download_name=nombre_archivo,
         mimetype='application/pdf'
     )
+
 
 
 
@@ -716,33 +824,32 @@ def generar_url_wompi(monto, referencia):
 
 
 @app.route('/cartera')
+@login_required
 def cartera():
-    if 'usuario_id' not in session:
-        return redirect(url_for('iniciar_sesion'))
     cur = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cur.execute("SELECT saldo_wallet FROM usuarios WHERE id=%s", (session['usuario_id'],))
+    cur.execute("SELECT saldo_wallet FROM usuarios WHERE id=%s", (current_user.id,))
     saldo = cur.fetchone()['saldo_wallet']
     cur.close()
     return render_template('cartera.html', saldo=saldo)
 
 
 
+
 @app.route('/iniciar_paypal', methods=['POST'])
+@login_required
 def iniciar_paypal():
-    usuario_id = session.get('usuario_id')
     monto = request.form.get('monto')
-    if not usuario_id or not monto:
-        flash("Usuario o monto faltante", "danger")
+    if not monto:
+        flash("Monto faltante", "danger")
         return redirect(url_for('cartera'))
 
-    # Crear orden con PayPal (simulado o real)
-    transaccion_id = f"PAYPAL-{usuario_id}-{int(datetime.now().timestamp())}"
+    transaccion_id = f"PAYPAL-{current_user.id}-{int(datetime.now().timestamp())}"
 
     cur = mysql.connection.cursor()
     cur.execute("""
         INSERT INTO recargas (usuario_id, metodo, transaccion_id, monto)
-        VALUES (%s,'paypal',%s,%s)
-    """, (usuario_id, transaccion_id, monto))
+        VALUES (%s, 'paypal', %s, %s)
+    """, (current_user.id, transaccion_id, monto))
     mysql.connection.commit()
     cur.close()
 
@@ -751,17 +858,13 @@ def iniciar_paypal():
 
 
 
+
 @app.route('/procesar_pago_paypal', methods=['POST'])
+@login_required
 def procesar_pago_paypal():
-    # No uses Flask-WTF aquí, CSRF se usa solo en formularios HTML
     data = request.get_json()
     txid = data['orderID']
-    payer = data['payerID']
     monto = data['monto']
-    usuario_id = session.get('usuario_id')
-
-    if not usuario_id:
-        return jsonify(status='error', message='Sesión no válida'), 401
 
     cur = mysql.connection.cursor()
 
@@ -770,17 +873,17 @@ def procesar_pago_paypal():
         SET estado='exitosa'
         WHERE transaccion_id=%s
     """, (txid,))
-    
+
     cur.execute("""
         INSERT INTO wallet_movimientos(usuario_id, referencia_externa, monto, tipo, estado, descripcion, medio_pago)
         VALUES (%s, %s, %s, 'recarga', 'completado', 'Recarga PayPal', 'paypal')
-    """, (usuario_id, txid, monto))
+    """, (current_user.id, txid, monto))
 
     cur.execute("""
         UPDATE usuarios
         SET saldo_wallet = saldo_wallet + %s
         WHERE id = %s
-    """, (monto, usuario_id))
+    """, (monto, current_user.id))
 
     mysql.connection.commit()
     cur.close()
@@ -790,19 +893,20 @@ def procesar_pago_paypal():
 
 
 
+
 @app.route('/iniciar_wompi', methods=['POST'])
+@login_required
 def iniciar_wompi():
-    usuario_id = session.get('usuario_id')
     monto = Decimal(request.form.get('monto'))
-    referencia = f"WOMPI-{usuario_id}-{int(datetime.utcnow().timestamp())}"
+    referencia = f"WOMPI-{current_user.id}-{int(datetime.utcnow().timestamp())}"
     
     url_pago = generar_url_wompi(monto, referencia)
 
     cur = mysql.connection.cursor()
     cur.execute("""
         INSERT INTO recargas (usuario_id, metodo, transaccion_id, monto)
-        VALUES (%s,'wompi',%s,%s)
-    """, (usuario_id, referencia, monto))
+        VALUES (%s, 'wompi', %s, %s)
+    """, (current_user.id, referencia, monto))
     mysql.connection.commit()
     cur.close()
     
@@ -842,10 +946,10 @@ def webhook_wompi():
 
 
 @app.route('/confirmacion_wompi')
+@login_required
 def confirmacion_wompi():
     flash("Tu recarga ha sido procesada. Revisa tu saldo.", "success")
     return redirect(url_for('cartera'))
-
 
 
 
@@ -857,9 +961,11 @@ def confirmacion_wompi():
 #----Funciones de la seccion Cerrar sesion-----#
 #---------------------------------------#
 @app.route('/cerrar_sesion')
+@login_required
 def cerrar_sesion():
-    session.clear()
-    return redirect(url_for('inicio'))
+    logout_user()
+    flash('Sesión cerrada correctamente.')
+    return redirect(url_for('iniciar_sesion'))
 
 
 
@@ -887,6 +993,8 @@ def ideas():
     cursor.execute("SELECT * FROM ideas ORDER BY fecha_creacion DESC")
     ideas = cursor.fetchall()
     return render_template("ideas.html", ideas=ideas)
+
+
 
 @app.route("/eliminar_idea/<int:id>")
 def eliminar_idea(id):
@@ -924,12 +1032,9 @@ def editar_idea(id):
 #----Funciones de la seccion Asistente-----#
 #---------------------------------------#
 @app.route('/asistente')
+@login_required
 def asistente():
-    if not session.get('logueado'):
-        return redirect(url_for('iniciar_sesion'))  # Protege el acceso
-
-    nombre_usuario = session.get('usuario')  # Lo guardaste así en iniciar_sesion
-    return render_template('asistente.html', nombre=nombre_usuario)
+    return render_template('asistente.html', nombre=current_user.nombre_usuario)
 
 
 
@@ -983,6 +1088,9 @@ def consultar():
 
     except Exception as e:
         return jsonify({"mensaje": f"❌ Error: {str(e)}"})
+    
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

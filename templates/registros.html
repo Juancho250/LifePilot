@@ -191,6 +191,7 @@
 <div id="modalAbono" class="modal">
   <div class="modal-contenido">
     <form method="POST" action="{{ url_for('abonar_prestamo') }}">
+        {{ form.hidden_tag() }}
       <input type="hidden" name="prestamo_id" id="abonoPrestamoId">
       
       <label>Monto a abonar:</label>
@@ -201,6 +202,7 @@
       <button type="submit">Confirmar abono</button>
       <button type="button" onclick="cerrarModalAbono()">Cancelar</button>
     </form>
+
   </div>
 </div>
 
